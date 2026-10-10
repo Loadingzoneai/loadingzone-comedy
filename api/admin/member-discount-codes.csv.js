@@ -68,8 +68,9 @@ module.exports = async function handler(req, res) {
       Accept: "application/json"
     };
     const query = new URLSearchParams({
-      select: "member_number,email,full_name,city,subscription_status,member_discount_codes(code,status)",
+      select: "member_number,email,full_name,city,subscription_status,member_discount_codes!inner(code,status)",
       subscription_status: "eq.active",
+      "member_discount_codes.status": "eq.active",
       order: "created_at.asc"
     });
     const membersResponse = await fetch(root + "/rest/v1/members?" + query.toString(), { headers });
