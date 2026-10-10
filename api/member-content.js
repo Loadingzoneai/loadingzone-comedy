@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     const root = baseUrl.replace(/\/$/, "");
     const [partnersResponse, eventsResponse] = await Promise.all([
       fetch(`${root}/rest/v1/member_partners?select=id,name,city,category,benefit_title,benefit_description,discount_text,terms,website_url,display_order&city=eq.${city}&is_active=eq.true&order=display_order.asc,name.asc`, { headers }),
-      fetch(`${root}/rest/v1/member_events?select=id,title,city,event_type,venue,starts_at,booking_url,capacity,description,source,display_order&city=eq.${city}&is_active=eq.true&order=starts_at.asc.nullslast,display_order.asc,title.asc`, { headers })
+      fetch(`${root}/rest/v1/member_events?select=id,title,city,event_type,venue,starts_at,booking_url,capacity,description,source,display_order&city=eq.${city}&is_active=eq.true&source=eq.eventbrite&event_type=eq.free_open_mic&order=starts_at.asc.nullslast,display_order.asc,title.asc`, { headers })
     ]);
 
     if (!partnersResponse.ok || !eventsResponse.ok) {
