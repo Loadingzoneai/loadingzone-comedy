@@ -13,7 +13,9 @@ function send(res, status, body, contentType = "application/json; charset=utf-8"
 }
 
 function csvCell(value) {
-  const safe = String(value ?? "");
+  let safe = String(value ?? "");
+  // Prevent spreadsheet formula execution when exported values begin with formula characters.
+  if (/^[\s\u0000-\u001f]*[=+@-]/.test(safe)) safe = "'" + safe;
   return '"' + safe.replace(/"/g, '""') + '"';
 }
 
@@ -67,11 +69,12 @@ module.exports = async function handler(req, res) {
     };
     const query = new URLSearchParams({
       select: "member_number,email,full_name,city,subscription_status,member_discount_codes(code,status)",
-      "subscription_status": "eq.active",
+      subscription_status: "eq.active",
       order: "created_at.asc"
     });
     const membersResponse = await fetch(root + "/rest/v1/members?" + query.toString(), { headers });
     if (!membersResponse.ok) {
+      // Avoid returning upstream details that might expose schema or service configuration.
       return send(res, 502, JSON.stringify({ error: "Could not retrieve membership export." }));
     }
     const members = await membersResponse.json();
@@ -92,7 +95,6 @@ module.exports = async function handler(req, res) {
     ];
     const csv = "\uFEFF" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
     res.setHeader("Content-Disposition", 'attachment; filename="loading-zone-member-discount-codes.csv"');
-    res.setHeader("Cache-Control", "no-store, private");
     return send(res, 200, csv, "text/csv; charset=utf-8");
   } catch (_error) {
     return send(res, 502, JSON.stringify({ error: "Could not create membership export." }));
