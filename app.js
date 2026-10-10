@@ -19,7 +19,7 @@ async function adminSendCode(){
  const emailEl=document.getElementById('admin-email');const email=(emailEl?.value||'').trim().toLowerCase();
  if(!email||!email.includes('@')){adminMessage('请输入有效的管理员邮箱。');return}
  const send=document.getElementById('admin-send-code');if(send)send.disabled=true;
- try{const cfg=await adminAuthConfig();const r=await fetch(cfg.url.replace(/\/$/,'')+'/auth/v1/otp',{method:'POST',headers:{'Content-Type':'application/json',apikey:cfg.publishableKey},body:JSON.stringify({email,create_user:false})});if(!r.ok)throw new Error('无法发送验证码，请确认邮箱已在会员认证系统中注册并检查邮件设置。');sessionStorage.setItem('lz_admin_pending_email',email);adminMessage('如果该邮箱已注册且邮件服务正常，验证码将发送至该邮箱。请检查收件箱和垃圾邮件。')}catch(e){adminMessage(e.message||'验证码发送失败，请稍后再试。')}finally{if(send)send.disabled=false}
+ try{const cfg=await adminAuthConfig();const r=await fetch(cfg.url.replace(/\/$/,'')+'/auth/v1/otp',{method:'POST',headers:{'Content-Type':'application/json',apikey:cfg.publishableKey},body:JSON.stringify({email,create_user:true})});if(!r.ok)throw new Error('无法发送验证码，请确认邮箱已在会员认证系统中注册并检查邮件设置。');sessionStorage.setItem('lz_admin_pending_email',email);adminMessage('如果该邮箱已注册且邮件服务正常，验证码将发送至该邮箱。请检查收件箱和垃圾邮件。')}catch(e){adminMessage(e.message||'验证码发送失败，请稍后再试。')}finally{if(send)send.disabled=false}
 }
 async function adminVerifyCode(){
  const email=sessionStorage.getItem('lz_admin_pending_email')||(document.getElementById('admin-email')?.value||'').trim().toLowerCase();const token=(document.getElementById('admin-otp')?.value||'').trim();
