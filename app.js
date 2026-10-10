@@ -33,7 +33,8 @@ async function renderCityBenefits(city){
   const eventCards=events.map(e=>{
    const url=safeExternalUrl(e.booking_url);
    const date=e.starts_at?new Date(e.starts_at):null;
-   const dateText=date&&!Number.isNaN(date.getTime())?date.toLocaleString('zh-AU',{dateStyle:'medium',timeStyle:'short',timeZone:'Australia/Melbourne'}):'时间待公布';
+   const timeZones={melbourne:'Australia/Melbourne',sydney:'Australia/Sydney',brisbane:'Australia/Brisbane'};
+   const dateText=date&&!Number.isNaN(date.getTime())?date.toLocaleString('zh-AU',{dateStyle:'medium',timeStyle:'short',timeZone:timeZones[city]||'Australia/Melbourne'}):'时间待公布';
    return `<article class="benefit-card"><div class="eyebrow">${escapeHtml(eventLabels[e.event_type]||'会员活动')}</div><h3>${escapeHtml(e.title)}</h3><p><strong>${escapeHtml(dateText)}</strong></p>${e.venue?`<p>${escapeHtml(e.venue)}</p>`:''}${e.description?`<p>${escapeHtml(e.description)}</p>`:''}${Number.isInteger(e.capacity)?`<p class="note">活动名额：${e.capacity}</p>`:''}${url?`<a class="card-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">活动 / 预约详情 ↗</a>`:''}</article>`;
   }).join('');
   el.innerHTML=`<div class="member-panel" style="margin-top:18px"><div class="eyebrow">SELECTED CITY</div><h3>${escapeHtml(cityName)}</h3><h3>合作商家福利</h3>${partners.length?`<div class="benefits-grid">${partnerCards}</div>`:'<p class="note">这个城市暂时还没有已发布的商家福利，后续添加并启用后会显示在这里。</p>'}<h3 style="margin-top:24px">免费开放麦与会员活动</h3>${events.length?`<div class="benefits-grid">${eventCards}</div>`:'<p class="note">这个城市暂时还没有已发布的活动，后续添加并启用后会显示在这里。</p>'}</div>`;
