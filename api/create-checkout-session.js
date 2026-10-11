@@ -3,6 +3,7 @@
  * Safety: refuses non-test Stripe keys and requires separate Sandbox price IDs.
  * No live-mode Checkout can be created through this route.
  */
+const { randomUUID } = require("crypto");
 const ALLOWED_CITIES = new Set(["melbourne", "sydney", "brisbane"]);
 const PLANS = new Set(["monthly", "annual"]);
 
@@ -25,9 +26,7 @@ function originFor(req) {
   ]);
   if (allowed.has(origin)) return origin;
   const host = String(req.headers.host || "").toLowerCase();
-  if (host.endsWith(".vercel.app") && host.includes("loadingzone-comedy")) {
-    return "https://" + host;
-  }
+  if (host.endsWith(".vercel.app") && host.includes("loadingzone-comedy")) return "https://" + host;
   return "";
 }
 
@@ -36,50 +35,34 @@ module.exports = async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return send(res, 405, { error: "Method not allowed" });
   }
-
   const stripeKey = process.env.STRIPE_SECRET_KEY || "";
   const monthlyPrice = process.env.STRIPE_TEST_PRICE_MONTHLY || "";
   const annualPrice = process.env.STRIPE_TEST_PRICE_ANNUAL || "";
   const baseUrl = process.env.SUPABASE_URL || "";
   const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY || "";
-  if (!stripeKey.startsWith("sk_test_")) {
-    return send(res, 503, { error: "Test-mode Stripe is not configured for this environment." });
-  }
+  if (!stripeKey.startsWith("sk_test_")) return send(res, 503, { error: "Test-mode Stripe is not configured for this environment." });
   if (!monthlyPrice || !annualPrice || !baseUrl || !publicKey) {
     return send(res, 503, { error: "Test prices or membership authentication are not configured yet." });
   }
-
   const tokenMatch = /^Bearer\s+(.+)$/i.exec(String(req.headers.authorization || ""));
   if (!tokenMatch) return send(res, 401, { error: "Sign in before starting membership checkout." });
-
   const origin = originFor(req);
   if (!origin) return send(res, 403, { error: "This site is not allowed to start checkout." });
-
   let body;
-  try {
-    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-  } catch (_) {
-    return send(res, 400, { error: "Invalid request body." });
-  }
+  try { body = typeof req.body === "string" ? JSON.parse(req.body) : req.body; }
+  catch (_) { return send(res, 400, { error: "Invalid request body." }); }
   const plan = String((body && body.plan) || "");
   const city = String((body && body.city) || "").toLowerCase();
-  if (!PLANS.has(plan) || !ALLOWED_CITIES.has(city)) {
-    return send(res, 400, { error: "Choose a valid membership plan and city." });
-  }
+  if (!PLANS.has(plan) || !ALLOWED_CITIES.has(city)) return send(res, 400, { error: "Choose a valid membership plan and city." });
 
   const root = baseUrl.replace(/\/$/, "");
   try {
     const userResponse = await fetch(root + "/auth/v1/user", {
-      headers: {
-        apikey: publicKey,
-        Authorization: "Bearer " + tokenMatch[1],
-        Accept: "application/json"
-      }
+      headers: { apikey: publicKey, Authorization: "Bearer " + tokenMatch[1], Accept: "application/json" }
     });
     if (!userResponse.ok) return send(res, 401, { error: "Valid sign-in required." });
     const user = await userResponse.json();
     if (!user || !user.id || !user.email) return send(res, 401, { error: "Account email is required." });
-
     const params = new URLSearchParams();
     params.set("mode", "subscription");
     params.set("success_url", origin + "/#membership?checkout=success");
@@ -94,20 +77,17 @@ module.exports = async function handler(req, res) {
     params.set("subscription_data[metadata][user_id]", user.id);
     params.set("subscription_data[metadata][city]", city);
     params.set("subscription_data[metadata][plan]", plan);
-
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: {
         Authorization: "Bearer " + stripeKey,
         "Content-Type": "application/x-www-form-urlencoded",
-        "Idempotency-Key": "lz-checkout-" + user.id + "-" + plan + "-" + city + "-" + String(body.requestId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)
+        "Idempotency-Key": "lz-checkout-" + randomUUID()
       },
       body: params
     });
     const session = await stripeResponse.json();
-    if (!stripeResponse.ok || !session.url) {
-      return send(res, 502, { error: "Could not create test checkout session." });
-    }
+    if (!stripeResponse.ok || !session.url) return send(res, 502, { error: "Could not create test checkout session." });
     return send(res, 200, { url: session.url });
   } catch (_) {
     return send(res, 502, { error: "Checkout service is temporarily unavailable." });
