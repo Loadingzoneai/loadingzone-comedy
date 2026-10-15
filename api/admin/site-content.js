@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const BUCKET = "site-media";
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 function send(res, status, body) { res.statusCode=status; res.setHeader("Content-Type","application/json; charset=utf-8"); res.setHeader("Cache-Control","no-store"); res.setHeader("X-Content-Type-Options","nosniff"); return res.end(JSON.stringify(body)); }
 function env() { return { url:(process.env.SUPABASE_URL||"").replace(/\/$/,""), key:process.env.SUPABASE_SECRET_KEY, pub:process.env.SUPABASE_PUBLISHABLE_KEY, admins:(process.env.ADMIN_EMAILS||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean) }; }
 async function admin(req) {
@@ -33,7 +33,7 @@ module.exports = async function handler(req,res) {
   const b=req.body||{}; const mime=String(b.mime_type||""); const base64=String(b.base64||"");
   if(!["image/jpeg","image/png","image/webp","image/gif"].includes(mime)||!base64)return send(res,400,{error:"Only JPG, PNG, WEBP or GIF images are supported."});
   const bytes=Buffer.from(base64.replace(/^data:[^;]+;base64,/,""),"base64");
-  if(!bytes.length||bytes.length>MAX_IMAGE_BYTES)return send(res,413,{error:"Image must be smaller than 10 MB."});
+  if(!bytes.length||bytes.length>MAX_IMAGE_BYTES)return send(res,413,{error:"Image must be smaller than 3 MB."});
   const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"}[mime];
   const name=Date.now()+"-"+crypto.randomBytes(5).toString("hex")+"."+ext;
   const r=await fetch(e.url+"/storage/v1/object/"+BUCKET+"/"+name,{method:"POST",headers:{apikey:e.key,Authorization:"Bearer "+e.key,"Content-Type":mime,"x-upsert":"false"},body:bytes});
