@@ -40,8 +40,9 @@ module.exports = async function handler(req, res) {
   const annualPrice = process.env.STRIPE_TEST_PRICE_ANNUAL || "";
   const baseUrl = process.env.SUPABASE_URL || "";
   const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY || "";
+  const databaseKey = process.env.SUPABASE_SECRET_KEY || "";
   if (!stripeKey.startsWith("sk_test_")) return send(res, 503, { error: "Test-mode Stripe is not configured for this environment." });
-  if (!monthlyPrice || !annualPrice || !baseUrl || !publicKey) {
+  if (!monthlyPrice || !annualPrice || !baseUrl || !publicKey || !databaseKey) {
     return send(res, 503, { error: "Test prices or membership authentication are not configured yet." });
   }
   const tokenMatch = /^Bearer\s+(.+)$/i.exec(String(req.headers.authorization || ""));
@@ -63,12 +64,18 @@ module.exports = async function handler(req, res) {
     if (!userResponse.ok) return send(res, 401, { error: "Valid sign-in required." });
     const user = await userResponse.json();
     if (!user || !user.id || !user.email) return send(res, 401, { error: "Account email is required." });
+    const memberResponse=await fetch(root+'/rest/v1/members?user_id=eq.'+encodeURIComponent(user.id)+'&select=stripe_customer_id,stripe_subscription_id,subscription_status&limit=1',{headers:{apikey:databaseKey,Authorization:'Bearer '+databaseKey}});
+    if(!memberResponse.ok)return send(res,503,{error:'Membership status cannot be verified. Please try again later.'});
+    const existingMembers=await memberResponse.json();
+    const member=existingMembers[0];
+    if(member?.stripe_subscription_id && !['canceled','incomplete_expired'].includes(member.subscription_status))return send(res,409,{error:'You already have a subscription. Please manage your existing membership.'});
     const params = new URLSearchParams();
     params.set("mode", "subscription");
-    params.set("success_url", origin + "/#membership?checkout=success");
-    params.set("cancel_url", origin + "/#membership?checkout=cancelled");
+    params.set("success_url", origin + "/#login?checkout=success");
+    params.set("cancel_url", origin + "/#login?checkout=cancelled");
     params.set("client_reference_id", user.id);
-    params.set("customer_email", user.email);
+    if(member?.stripe_customer_id)params.set('customer',member.stripe_customer_id);
+    else params.set("customer_email", user.email);
     params.set("line_items[0][price]", plan === "monthly" ? monthlyPrice : annualPrice);
     params.set("line_items[0][quantity]", "1");
     params.set("metadata[user_id]", user.id);

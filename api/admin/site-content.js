@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const {records}=require('../../lib/content');
 const BUCKET = "site-media";
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 function send(res, status, body) { res.statusCode=status; res.setHeader("Content-Type","application/json; charset=utf-8"); res.setHeader("Cache-Control","no-store"); res.setHeader("X-Content-Type-Options","nosniff"); return res.end(JSON.stringify(body)); }
@@ -24,7 +25,9 @@ module.exports = async function handler(req,res) {
     return send(res,200,{items:data});
   }
   if(req.method==="PUT"){
-    const b=req.body||{}; const contentKey=String(b.content_key||""); const value=b.content_value;
+    const b=req.body||{}; const contentKey=String(b.content_key||""); let value=b.content_value;
+    if(!['home','shows','gallery'].includes(contentKey))return send(res,400,{error:'Unsupported content type.'});
+    if(contentKey==='shows'||contentKey==='gallery'){try{value=records(value)}catch(err){return send(res,400,{error:err.message})}}
     if(!/^[a-z0-9_-]{1,80}$/.test(contentKey)||!value||typeof value!=="object"||Array.isArray(value))return send(res,400,{error:"Invalid content payload."});
     const r=await fetch(e.url+"/rest/v1/site_content?on_conflict=content_key",{method:"POST",headers:{apikey:e.key,Authorization:"Bearer "+e.key,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify({content_key:contentKey,content_value:value,updated_at:new Date().toISOString(),updated_by:email})});
     const data=await r.json().catch(()=>[]); if(!r.ok)return send(res,502,{error:"Could not save content. Check CMS database setup."});

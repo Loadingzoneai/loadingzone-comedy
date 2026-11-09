@@ -13,11 +13,14 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function rawBody(req) {
+async function rawBody(req) {
   if (Buffer.isBuffer(req.rawBody)) return req.rawBody;
   if (Buffer.isBuffer(req.body)) return req.body;
   if (typeof req.rawBody === "string") return Buffer.from(req.rawBody);
-  return null;
+  if(req.body!=null)return null;
+  const chunks=[];let size=0;
+  for await(const chunk of req){size+=Buffer.byteLength(chunk);if(size>1048576)return null;chunks.push(Buffer.from(chunk));}
+  return Buffer.concat(chunks);
 }
 
 function verifySignature(payload, header, secret) {
@@ -56,7 +59,7 @@ module.exports = async function handler(req, res) {
   }
   if (!supabaseUrl || !supabaseKey) return send(res, 503, { error: "Membership storage is not configured." });
 
-  const payload = rawBody(req);
+  const payload = await rawBody(req);
   if (!payload) return send(res, 400, { error: "Raw request body required for signature verification." });
   if (!verifySignature(payload, req.headers["stripe-signature"], webhookSecret)) {
     return send(res, 400, { error: "Invalid webhook signature." });
@@ -82,7 +85,14 @@ module.exports = async function handler(req, res) {
   });
   if (!eventInsert.ok) return send(res, 500, { error: "Could not record webhook event." });
   const inserted = await eventInsert.json().catch(() => []);
-  if (!Array.isArray(inserted) || inserted.length === 0) return send(res, 200, { received: true, duplicate: true });
+  if (!Array.isArray(inserted) || inserted.length === 0) {
+    const existingResponse=await fetch(supabaseUrl+'/rest/v1/stripe_events?id=eq.'+encodeURIComponent(event.id)+'&select=processing_status', {headers:dbHeaders});
+    if(!existingResponse.ok)return send(res,500,{error:'Could not check event status.'});
+    const existing=await existingResponse.json();
+    if(existing[0]?.processing_status==='processed')return send(res,200,{received:true,duplicate:true});
+    // Failed or interrupted deliveries must run again; the latest subscription is
+    // retrieved below, so an old notification cannot roll back its current status.
+  }
 
   async function updateMember(filter, patch) {
     const url = supabaseUrl + "/rest/v1/members?" + filter;
@@ -116,8 +126,8 @@ module.exports = async function handler(req, res) {
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId || null,
       subscription_status: subscription.status || "inactive",
-      current_period_start: isoFromUnix(subscription.current_period_start),
-      current_period_end: isoFromUnix(subscription.current_period_end),
+      current_period_start: isoFromUnix(subscription.items?.data?.[0]?.current_period_start ?? subscription.current_period_start),
+      current_period_end: isoFromUnix(subscription.items?.data?.[0]?.current_period_end ?? subscription.current_period_end),
       cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
       member_since: isoFromUnix(subscription.start_date) || isoFromUnix(subscription.created)
     };
@@ -156,11 +166,12 @@ module.exports = async function handler(req, res) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        if (obj && obj.id) await syncSubscription(obj, (obj.metadata || {}).user_id);
+        if (obj && obj.id) await syncSubscription(await retrieveSubscription(obj.id), (obj.metadata || {}).user_id);
         break;
       case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
-        const subId = typeof (obj && obj.subscription) === "string" ? obj.subscription : obj && obj.subscription && obj.subscription.id;
+        const reference=obj?.subscription||obj?.parent?.subscription_details?.subscription;
+        const subId = typeof reference==='string'?reference:reference?.id;
         if (subId) await syncSubscription(await retrieveSubscription(subId));
         break;
       }
