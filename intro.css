@@ -1,0 +1,57 @@
+/* 候场喜剧 · 剧场入场 */
+.intro{position:relative;background:#000;color:#fff;margin-top:-78px}
+.intro[hidden]{display:none}
+.intro-sticky{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+.intro canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.intro-ui{position:absolute;inset:0;pointer-events:none}
+.intro-ui>*{pointer-events:auto}
+body.intro-on #app .hero{display:none}
+body.intro-on .nav{background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,0));border-bottom-color:transparent;backdrop-filter:none}
+
+.intro-brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.intro-brand img{width:min(420px,70vw);filter:drop-shadow(0 8px 40px rgba(255,170,60,.25))}
+
+.intro-line{position:absolute;left:0;right:0;bottom:22vh;text-align:center;font-weight:900;font-size:clamp(26px,4.2vw,56px);letter-spacing:-.02em;text-shadow:0 4px 30px rgba(0,0,0,.8);pointer-events:none;padding:0 6vw}
+.intro-line.small{font-size:clamp(20px,2.6vw,34px);color:#ffcf7a;letter-spacing:.08em}
+
+.intro-hero{position:absolute;right:6vw;top:50%;transform:translateY(-50%);max-width:min(520px,40vw)}
+.intro-hero .eyebrow{color:var(--yellow,#ffb52f)}
+.intro-hero h1{font-size:clamp(40px,5.6vw,80px);line-height:1.02;margin:16px 0 18px;font-weight:900;letter-spacing:-.045em}
+.intro-hero h1 em{color:var(--yellow,#ffb52f);font-style:normal}
+.intro-hero p{color:#cfcac2;font-size:17px;line-height:1.7;margin:0 0 26px}
+.intro-hero .cta-row{display:flex;gap:12px;flex-wrap:wrap}
+
+.intro-hot{position:absolute;border-radius:14px;cursor:pointer;outline:none}
+.intro-hot span{position:absolute;left:50%;top:-10px;transform:translate(-50%,-100%);white-space:nowrap;font:700 13px 'Space Grotesk','Noto Sans SC',sans-serif;letter-spacing:.08em;padding:8px 14px;border-radius:999px;background:rgba(255,181,47,.95);color:#111;opacity:0;transition:opacity .25s,transform .25s}
+.intro-hot:hover span,.intro-hot:focus-visible span{opacity:1;transform:translate(-50%,-115%)}
+.intro-hot:focus-visible{box-shadow:0 0 0 2px var(--yellow,#ffb52f)}
+
+.intro-pill{position:absolute;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:9px 16px;font:600 13px 'Space Grotesk','Noto Sans SC',sans-serif;letter-spacing:.06em;cursor:pointer;backdrop-filter:blur(6px)}
+.intro-pill:hover{border-color:var(--yellow,#ffb52f);color:var(--yellow,#ffb52f)}
+.intro-skip{right:4vw;top:96px}
+.intro-replay{left:4vw;bottom:28px}
+.intro-sound{right:4vw;bottom:28px}
+.intro-hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font:600 12px 'Space Grotesk','Noto Sans SC',sans-serif;letter-spacing:.22em;color:rgba(255,255,255,.7);pointer-events:none;text-transform:uppercase}
+.intro-hint:after{content:"";display:block;width:1px;height:28px;margin:10px auto 0;background:linear-gradient(rgba(255,255,255,.7),transparent);animation:introHint 1.8s ease-in-out infinite}
+@keyframes introHint{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* 加载页：Logo 圆点依次点亮 */
+.intro-loader{position:fixed;inset:0;z-index:60;background:#000;display:grid;place-items:center;transition:opacity .8s ease}
+.intro-loader.done{opacity:0;pointer-events:none}
+.intro-loader .ring{position:relative;width:132px;height:132px}
+.intro-loader .ring i{position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px;border-radius:50%;background:#3a2a14;animation:introDot 1.2s linear infinite}
+.intro-loader .ring img{position:absolute;inset:34px;width:64px;height:64px;object-fit:contain;object-position:left center}
+.intro-loader small{display:block;text-align:center;margin-top:18px;font:600 12px 'Space Grotesk','Noto Sans SC',sans-serif;letter-spacing:.3em;color:#f49a2e}
+@keyframes introDot{0%,8%{background:#ffb52f;box-shadow:0 0 12px #f49a2e}40%,100%{background:#3a2a14;box-shadow:none}}
+
+@media (max-width:900px){
+  .intro-hero{left:6vw;right:6vw;top:auto;bottom:max(90px,12vh);transform:none;max-width:none}
+  .intro-hero h1{font-size:clamp(34px,9vw,52px);margin:10px 0 12px}
+  .intro-hero p{font-size:15px;margin-bottom:18px}
+  .intro-hero .cta-row .btn{padding:12px 18px}
+  .intro-line{bottom:30vh}
+  .intro-skip{top:auto;bottom:80px}
+  .intro-hot span{font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){.intro-hint:after,.intro-loader .ring i{animation:none}}
+.intro-loader .logo-icon{position:absolute;left:34px;top:34px;width:64px;height:64px;background:url(logo.png) no-repeat;background-size:379px auto;background-position:-22px -47px;border-radius:50%}
