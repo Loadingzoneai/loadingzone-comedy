@@ -23,5 +23,28 @@ test('processed webhook is acknowledged without updating members again',async()=
 test('existing subscription cannot start another membership checkout',async()=>{env();global.fetch=async url=>{if(url.includes('/auth/'))return json({id:'own',email:'own@example.com'});if(url.includes('/rest/'))return json([{stripe_subscription_id:'sub_existing',subscription_status:'active'}]);throw new Error('Must not create duplicate subscription')};const res=response();await require('../api/create-checkout-session')({method:'POST',headers:{authorization:'Bearer token',origin:'https://loadingzonecomedy.au'},body:{plan:'monthly',city:'melbourne'}},res);assert.equal(res.statusCode,409)});
 test('billing portal uses stored customer identity and rejects an unrelated return domain',async()=>{env();global.fetch=async url=>url.includes('/auth/')?json({id:'own',email:'own@example.com'}):json([{stripe_customer_id:'cus_own'}]);const res=response();await require('../api/billing-portal')({method:'POST',headers:{authorization:'Bearer token',origin:'https://unrelated.example'},body:{customer:'cus_other'}},res);assert.equal(res.statusCode,403)});
 test('CMS rejects unauthenticated writes before uploading images',async()=>{env();global.fetch=async()=>{throw new Error('Must not upload')};const res=response();await require('../api/admin/site-content')({method:'POST',headers:{},body:{mime_type:'image/png',base64:'abcd'}},res);assert.equal(res.statusCode,401)});
-test('event import follows pagination and excludes private or cancelled events',async()=>{env();process.env.EVENTBRITE_TOKEN='test';process.env.EVENTBRITE_ORG_ID='123';let page=0;global.fetch=async()=>{page++;return json({events:[{id:String(page),name:{text:'公开演出'},listed:true,status:'live',start:{utc:'2030-01-01T00:00:00Z'}},{id:'private',listed:false,status:'live'},{id:'cancelled',listed:true,status:'canceled'}],pagination:{has_more_items:page===1}})};const res=response();await require('../api/eventbrite/events')({method:'GET'},res);assert.equal(page,2);assert.equal(res.body.events.length,2)});
+test('Eventbrite imports only public, active Loading Zone events across pages', async () => {
+  env();
+  process.env.EVENTBRITE_TOKEN = 'test';
+  process.env.EVENTBRITE_ORG_ID = '123';
+  let page = 0;
+  const ownEvent = {organizer_id: '75417874333', listed: true, status: 'live'};
+  global.fetch = async () => {
+    page++;
+    return json({
+      events: [
+        {...ownEvent, id: 'own-' + page},
+        {...ownEvent, id: 'other', organizer_id: '999'},
+        {...ownEvent, id: 'missing', organizer_id: undefined},
+        {...ownEvent, id: 'private', listed: false},
+        {...ownEvent, id: 'cancelled', status: 'canceled'}
+      ],
+      pagination: {has_more_items: page === 1}
+    });
+  };
+  const res = response();
+  await require('../api/eventbrite/events')({method: 'GET'}, res);
+  assert.equal(page, 2);
+  assert.deepEqual(res.body.events.map(event => event.externalId), ['own-1', 'own-2']);
+});
 test('frontend escapes show text, validates ticket links and handles Stripe return route',()=>{const app={innerHTML:''};const storage=new Map();const ctx={console,URL,Date,Intl,crypto,location:{hash:'#membership?checkout=success'},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},sessionStorage:{getItem:()=>null},document:{documentElement:{},getElementById:id=>id==='app'?app:null,querySelectorAll:()=>[],querySelector:()=>null},window:{addEventListener(){}},fetch:async()=>({ok:false,json:async()=>({})})};vm.createContext(ctx);vm.runInContext(fs.readFileSync('app.js','utf8'),ctx);vm.runInContext(fs.readFileSync('site.js','utf8'),ctx);assert.match(app.innerHTML,/A\$12.80/);const result=vm.runInContext('showMarkup([{title:"<script>alert(1)</script>",ticketUrl:"javascript:alert(1)"}])',ctx);assert.doesNotMatch(result,/<script>|href="javascript:/);assert.match(result,/&lt;script&gt;/);assert.equal(vm.runInContext('melbourneDate("2026-11-20T19:30")',ctx),'2026-11-20T08:30:00.000Z')});
