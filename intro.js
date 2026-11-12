@@ -13,8 +13,8 @@
   const ui = (name) => root.querySelector('[data-intro="' + name + '"]');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 自动播放时间轴（秒）：开门 → 走过道 → 暗场 → 灯亮
-  const TIMELINE = [[0, 0], [4.5, 0.1], [20.5, 0.74], [22.8, 0.8], [25, 1]];
-  const LIGHT_AT = 22.8;
+  const TIMELINE = [[0, 0], [2.5, 0.1], [11, 0.74], [12.5, 0.8], [14.5, 1]];
+  const LIGHT_AT = 12.5;
   function timeToP(sec) {
     for (let i = 1; i < TIMELINE.length; i++) {
       const [t0, p0] = TIMELINE[i - 1], [t1, p1] = TIMELINE[i];
@@ -514,9 +514,7 @@
    * fx/fy 为画面聚焦点（相对照片宽高），z 为放大倍数。
    */
   const SHOTS = [
-    { src: 'intro-assets/hall-wide.jpg', t0: 0, t1: 7.8, from: { fx: 0.5, fy: 0.36, z: 1.35 }, to: { fx: 0.5, fy: 0.58, z: 1.06 } },
-    { src: 'intro-assets/hall-side.jpg', t0: 6.8, t1: 14.2, from: { fx: 0.32, fy: 0.5, z: 1.08 }, to: { fx: 0.7, fy: 0.56, z: 1.32 } },
-    { src: 'intro-assets/hall-front.jpg', t0: 13.2, t1: 23, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.55, z: 1.85 } }
+    { src: 'intro-assets/hall-front.jpg', t0: 0, t1: 12.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.56, z: 1.9 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
@@ -756,7 +754,7 @@
       vignette(0.55);
     } else {
       if (dark < 1) {
-        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : 23, 1 - 0.6 * smooth(0.55, 0.74, p), t);
+        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : 12.5, 1 - 0.6 * smooth(0.55, 0.74, p), t);
         else drawHall(p, house, phones, doorOpen, t);
       }
       ctx.globalAlpha = 1;
