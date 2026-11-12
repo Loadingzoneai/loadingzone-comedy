@@ -1,5 +1,5 @@
 /* 候场喜剧 · 剧场入场
- * 不依赖第三方库：Canvas 2D 程序化绘制观众厅，滚动驱动镜头走向舞台，
+ * 不依赖第三方库：Canvas 2D 程序化绘制观众厅，打开首页后自动播放镜头走向舞台，
  * 灯亮后切换为真实舞台照片 hero-home.jpeg。
  * 只在首页播放；直接打开 #login / #membership 等页面、付款回跳时不播放。
  * 调试：在网址后加 ?intro=1 可强制重新播放完整入场。
@@ -12,7 +12,16 @@
   const ctx = canvas.getContext('2d');
   const ui = (name) => root.querySelector('[data-intro="' + name + '"]');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const FULL_VH = 620;
+  // 自动播放时间轴（秒）：开门 → 走过道 → 暗场 → 灯亮
+  const TIMELINE = [[0, 0], [4.5, 0.1], [20.5, 0.74], [22.8, 0.8], [25, 1]];
+  const LIGHT_AT = 22.8;
+  function timeToP(sec) {
+    for (let i = 1; i < TIMELINE.length; i++) {
+      const [t0, p0] = TIMELINE[i - 1], [t1, p1] = TIMELINE[i];
+      if (sec <= t1) return p0 + (p1 - p0) * clamp((sec - t0) / (t1 - t0));
+    }
+    return 1;
+  }
   const SEEN_KEY = 'lz_intro_seen';
   const SEEN_DAYS = 7;
   const RETURN_KEYS = ['checkout', 'session_id', 'code', 'token', 'type', 'access_token', 'error'];
@@ -93,14 +102,14 @@
     root.hidden = m === 'off';
     root.dataset.mode = m;
     document.body.classList.toggle('intro-on', m !== 'off');
-    root.style.height = m === 'full' ? FULL_VH + 'vh' : '100vh';
+    root.style.height = '100vh';
     if (m === 'stage') { state.p = state.target = 1; state.lit = 1; state.litTarget = 1; }
-    if (m === 'full') { state.p = state.target = 0; state.lit = 0; state.litTarget = 0; }
+    if (m === 'full') { state.p = state.target = 0; state.lit = 0; state.litTarget = 0; state.clock = 0; }
     if (m !== 'off') { resize(); start(); }
   }
 
   /* ---------- 状态 ---------- */
-  const state = { p: 0, target: 0, lit: 0, litTarget: 0, mx: 0, my: 0, yaw: 0, pitch: 0, time: 0, clicked: false };
+  const state = { p: 0, target: 0, lit: 0, litTarget: 0, mx: 0, my: 0, yaw: 0, pitch: 0, time: 0, clicked: false, clock: 0, playing: false };
 
   /* ---------- 画布尺寸 ---------- */
   let W = 0, H = 0, DPR = 1, F = 600;
@@ -512,14 +521,12 @@
     state.mx = e.clientX / innerWidth - 0.5;
     state.my = e.clientY / innerHeight - 0.5;
   }, { passive: true });
-  ui('skip').addEventListener('click', () => {
-    const top = root.getBoundingClientRect().top + scrollY;
-    scrollTo({ top: top + (root.offsetHeight - innerHeight) * 0.97, behavior: 'smooth' });
-  });
+  ui('skip').addEventListener('click', () => { state.playing = true; state.clock = Math.max(state.clock, LIGHT_AT - 0.6); });
   ui('replay').addEventListener('click', () => {
     if (location.search.indexOf('intro=') < 0) history.replaceState(null, '', location.pathname + location.hash);
     setMode('full');
-    scrollTo({ top: root.getBoundingClientRect().top + scrollY - 1, behavior: 'auto' });
+    state.playing = true;
+    scrollTo({ top: Math.max(0, root.getBoundingClientRect().top + scrollY - 1), behavior: 'auto' });
   });
   addEventListener('hashchange', () => {
     if (route() === 'home') { if (mode === 'off') setMode('stage'); }
@@ -535,18 +542,14 @@
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     state.time += dt;
+    if (mode === 'full' && state.playing) state.clock += dt;
     const rect = root.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > innerHeight) return;
-    if (mode === 'full') {
-      const total = Math.max(1, root.offsetHeight - innerHeight);
-      state.target = clamp(-rect.top / total);
-    }
-    state.p += (state.target - state.p) * (1 - Math.exp(-dt * 5));
-    if (Math.abs(state.target - state.p) < 0.0005) state.p = state.target;
+    if (mode === 'full') state.p = state.target = timeToP(state.clock);
     const p = state.p, t = state.time;
 
     // 灯亮：越过 0.8 后按时间播放点亮动画，往回滚则熄灭
-    state.litTarget = mode === 'stage' || p >= 0.8 ? 1 : p < 0.77 ? 0 : state.litTarget;
+    state.litTarget = mode === 'stage' || p >= 0.8 ? 1 : 0;
     if (state.litTarget && state.lit === 0 && mode === 'full') clickSound();
     state.lit = state.litTarget ? Math.min(1, state.lit + dt / (reduceMotion ? 0.01 : 1.15)) : Math.max(0, state.lit - dt / 0.45);
     if (p > 0.95 && mode === 'full') markSeen();
@@ -602,15 +605,17 @@
     set('hot-stool', smooth(0.85, 1, lit));
     set('skip', mode === 'full' ? 1 - smooth(0.82, 0.9, p) : 0);
     set('replay', mode === 'stage' || p > 0.96 ? smooth(0.6, 1, lit) : 0);
-    ui('hint').textContent = COPY[curLang()][p > 0.85 || mode === 'stage' ? 'next' : 'enter'];
+    ui('hint').textContent = COPY[curLang()].next;
+    set('hint', smooth(0.7, 1, lit));
     if (sound.murmur) sound.murmur.gain.setTargetAtTime(sound.on ? 0.05 * house * (1 - dark) + (lit > 0 ? 0.008 : 0) : 0, sound.ac.currentTime, 0.2);
   }
 
   /* ---------- 加载页 ---------- */
   function finishLoader() {
     const loader = ui('loader');
-    if (!loader) return;
+    if (!loader) { state.playing = true; return; }
     loader.classList.add('done');
+    state.playing = true;
     setTimeout(() => loader.remove(), 900);
   }
 
