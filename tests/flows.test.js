@@ -47,4 +47,25 @@ test('Eventbrite imports only public, active Loading Zone events across pages', 
   assert.equal(page, 2);
   assert.deepEqual(res.body.events.map(event => event.externalId), ['own-1', 'own-2']);
 });
+test('Eventbrite sync reads the Loading Zone organizer without an organization ID and skips finished events', async () => {
+  env();
+  delete process.env.EVENTBRITE_TOKEN; delete process.env.EVENTBRITE_ORG_ID; delete process.env.EVENTBRITE_ORGANIZATION_ID;
+  process.env.EVENTBRITE_API_KEY = 'test-key';
+  delete require.cache[require.resolve('../api/eventbrite/events')];
+  const urls = [];
+  global.fetch = async (url, opts) => {
+    urls.push({url, auth: opts.headers.Authorization});
+    return json({events: [
+      {id: 'next', organizer_id: '75417874333', listed: true, status: 'live', end: {utc: '2999-01-01T00:00:00Z'}, venue: {name: 'Library at The Dock', address: {city: 'Docklands', region: 'VIC'}}},
+      {id: 'over', organizer_id: '75417874333', listed: true, status: 'started', end: {utc: '2000-01-01T00:00:00Z'}}
+    ], pagination: {has_more_items: false}});
+  };
+  const res = response();
+  await require('../api/eventbrite/events')({method: 'GET'}, res);
+  assert.equal(res.statusCode, 200);
+  assert.match(urls[0].url, /\/v3\/organizers\/75417874333\/events\//);
+  assert.equal(urls[0].auth, 'Bearer test-key');
+  assert.deepEqual(res.body.events.map(e => [e.externalId, e.city]), [['next', 'melbourne']]);
+  delete process.env.EVENTBRITE_API_KEY;
+});
 test('frontend escapes show text, validates ticket links and handles Stripe return route',()=>{const app={innerHTML:''};const storage=new Map();const ctx={console,URL,Date,Intl,crypto,location:{hash:'#membership?checkout=success'},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},sessionStorage:{getItem:()=>null},document:{documentElement:{},getElementById:id=>id==='app'?app:null,querySelectorAll:()=>[],querySelector:()=>null},window:{addEventListener(){}},fetch:async()=>({ok:false,json:async()=>({})})};vm.createContext(ctx);vm.runInContext(fs.readFileSync('app.js','utf8'),ctx);vm.runInContext(fs.readFileSync('site.js','utf8'),ctx);assert.match(app.innerHTML,/A\$12.80/);const result=vm.runInContext('showMarkup([{title:"<script>alert(1)</script>",ticketUrl:"javascript:alert(1)"}])',ctx);assert.doesNotMatch(result,/<script>|href="javascript:/);assert.match(result,/&lt;script&gt;/);assert.equal(vm.runInContext('melbourneDate("2026-11-20T19:30")',ctx),'2026-11-20T08:30:00.000Z')});
