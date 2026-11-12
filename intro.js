@@ -415,19 +415,7 @@
         any = poly([[ex, s.fy, s.z - 0.25], [ex, s.fy, s.z + 0.2], [ex, s.fy + 0.6, s.z + 0.2], [ex, s.fy + 0.68, s.z - 0.25]]) || any;
       }
       if (any) { ctx.fillStyle = shade([132, 88, 44], dist); ctx.fill(); }
-      // 观众头部
-      ctx.beginPath(); any = false;
-      for (const s of row.seats) {
-        if (!s.occupied) continue;
-        const c = toCam(s.x, s.fy + 1.3, s.z + 0.25);
-        if (c[2] < 1.4) continue;
-        const rr = Math.min(F * 0.05, (0.12 / c[2]) * F);
-        ctx.moveTo(sx(c) + rr, sy(c)); ctx.ellipse(sx(c), sy(c), rr, rr * 1.15, 0, 0, Math.PI * 2);
-        any = true;
-      }
-      if (any) { ctx.fillStyle = shade([44, 26, 24], dist); ctx.fill(); }
       add();
-      if (phones > 0.01) for (const s of row.seats) if (s.phone) glow(s.cool ? COOL : WARM, s.px, s.py, s.z + 0.2, 0.5, phones * (0.6 + 0.4 * Math.sin(t * s.sp + s.ph)));
       glow(WARM, -1.1, floorY(row.z) + 0.06, row.z, 0.28, 0.7);
       glow(WARM, 1.1, floorY(row.z) + 0.06, row.z, 0.28, 0.7);
       normal();
@@ -520,6 +508,48 @@
     x.putImageData(img, 0, 0);
     return ctx.createPattern(c, 'repeat');
   })();
+
+  /* ---------- 实景照片推镜（入场主画面） ----------
+   * 替换照片：把 intro-assets/ 里的同名文件换掉即可（建议横图，宽度 ≥ 1800px）。
+   * fx/fy 为画面聚焦点（相对照片宽高），z 为放大倍数。
+   */
+  const SHOTS = [
+    { src: 'intro-assets/hall-wide.jpg', t0: 0, t1: 7.8, from: { fx: 0.5, fy: 0.36, z: 1.35 }, to: { fx: 0.5, fy: 0.58, z: 1.06 } },
+    { src: 'intro-assets/hall-side.jpg', t0: 6.8, t1: 14.2, from: { fx: 0.32, fy: 0.5, z: 1.08 }, to: { fx: 0.7, fy: 0.56, z: 1.32 } },
+    { src: 'intro-assets/hall-front.jpg', t0: 13.2, t1: 23, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.55, z: 1.85 } }
+  ];
+  let shotsReady = 0;
+  for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
+  function drawShot(sh, k, alpha, px, py) {
+    const iw = sh.img.naturalWidth, ih = sh.img.naturalHeight;
+    const e = k * k * (3 - 2 * k);
+    const fx = sh.from.fx + (sh.to.fx - sh.from.fx) * e, fy = sh.from.fy + (sh.to.fy - sh.from.fy) * e;
+    const z = sh.from.z + (sh.to.z - sh.from.z) * e;
+    const s = Math.max(W / iw, H / ih) * z * 1.04;
+    const w = iw * s, h = ih * s;
+    let x = W / 2 - fx * w + px, y = H / 2 - fy * h + py;
+    x = Math.min(0, Math.max(W - w, x)); y = Math.min(0, Math.max(H - h, y));
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(sh.img, x, y, w, h);
+    ctx.globalAlpha = 1;
+  }
+  function drawShots(clock, bright, t) {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const px = -state.yaw * W * 0.12, py = state.pitch * H * 0.12;
+    for (const sh of SHOTS) {
+      if (!sh.ok || clock < sh.t0 - 0.01 || clock > sh.t1 + 1.2) continue;
+      const k = clamp((clock - sh.t0) / (sh.t1 - sh.t0));
+      const a = sh.t0 === 0 ? 1 : smooth(sh.t0, sh.t0 + 1.2, clock);
+      drawShot(sh, k, a, px, py);
+    }
+    if (bright < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - bright})`; ctx.fillRect(0, 0, W, H); }
+    const haze = ctx.createLinearGradient(0, 0, 0, H);
+    haze.addColorStop(0, `rgba(255,170,80,${0.06 * bright})`); haze.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = haze; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 0.07; ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = grainPattern;
+    ctx.save(); ctx.translate((t * 997) % 128, (t * 613) % 128); ctx.fillRect(-128, -128, W + 256, H + 256); ctx.restore();
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
 
   /* ---------- 灯亮后的真实舞台照片 ---------- */
   const photo = new Image();
@@ -725,7 +755,10 @@
       drawStage(b, t);
       vignette(0.55);
     } else {
-      if (dark < 1) drawHall(p, house, phones, doorOpen, t);
+      if (dark < 1) {
+        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : 23, 1 - 0.6 * smooth(0.55, 0.74, p), t);
+        else drawHall(p, house, phones, doorOpen, t);
+      }
       ctx.globalAlpha = 1;
       vignette(0.65);
       if (dark > 0) { ctx.fillStyle = `rgba(0,0,0,${dark})`; ctx.fillRect(0, 0, W, H); }
@@ -763,6 +796,10 @@
   if (m !== 'off') {
     const t0 = performance.now();
     const ready = () => setTimeout(finishLoader, Math.max(0, 1100 - (performance.now() - t0)));
-    if (photoReady) ready(); else { photo.addEventListener('load', ready); photo.addEventListener('error', ready); }
+    let waiting = 1 + SHOTS.length, done = false;
+    const one = () => { if (--waiting <= 0 && !done) { done = true; ready(); } };
+    setTimeout(() => { if (!done) { done = true; ready(); } }, 6000);
+    if (photoReady) one(); else { photo.addEventListener('load', one); photo.addEventListener('error', one); }
+    for (const sh of SHOTS) { if (sh.ok) one(); else { sh.img.addEventListener('load', one); sh.img.addEventListener('error', one); } }
   } else finishLoader();
 })();

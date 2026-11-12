@@ -11,7 +11,7 @@ body.intro-on .nav{background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,
 .intro-brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
 .intro-brand img{width:min(420px,70vw);filter:drop-shadow(0 8px 40px rgba(255,170,60,.25))}
 
-.intro-line{position:absolute;left:0;right:0;bottom:22vh;text-align:center;font-weight:900;font-size:clamp(26px,4.2vw,56px);letter-spacing:-.02em;text-shadow:0 4px 30px rgba(0,0,0,.8);pointer-events:none;padding:0 6vw}
+.intro-line{position:absolute;left:0;right:0;bottom:calc(22vh - 40px);margin:0;padding-top:40px;padding-bottom:40px;background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(0,0,0,.55),rgba(0,0,0,0));text-align:center;font-weight:900;font-size:clamp(26px,4.2vw,56px);letter-spacing:-.02em;text-shadow:0 4px 30px rgba(0,0,0,.8);pointer-events:none;padding:0 6vw}
 .intro-line.small{font-size:clamp(20px,2.6vw,34px);color:#ffcf7a;letter-spacing:.08em}
 
 .intro-hero{position:absolute;right:6vw;top:50%;transform:translateY(-50%);max-width:min(520px,40vw)}
