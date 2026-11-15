@@ -58,8 +58,8 @@
     const title = ui('title');
     const sub = ui('subtitle');
     // 中文标题和副标题沿用后台首页 CMS（如已发布）
-    if (l === 'zh' && cms.title) title.innerHTML = esc(cms.title).replace(/\n/g, '<br>');
-    else title.innerHTML = c.title;
+    const t1 = l === 'zh' ? cms.title : cms.titleEn, t2 = l === 'zh' ? cms.title2 : cms.titleEn2;
+    title.innerHTML = (t1 || t2) ? esc(t1 || '') + ' <em>' + esc(t2 || '') + '</em>' : c.title;
     title.classList.toggle('en', l === 'en');
     sub.textContent = c.subtitle;
     sub.hidden = !c.subtitle;
@@ -68,7 +68,7 @@
   }
   fetch('/api/site-content', { headers: { Accept: 'application/json' } })
     .then((r) => (r.ok ? r.json() : null))
-    .then((d) => { if (d && d.home) { cms = d.home; applyCopy(); } })
+    .then((d) => { if (d && d.home) { cms = d.home; applyCopy(); if (cms.intro && cms.intro.enabled === false && mode !== 'off') setMode('off'); } })
     .catch(() => {});
 
   /* ---------- 小工具 ---------- */
