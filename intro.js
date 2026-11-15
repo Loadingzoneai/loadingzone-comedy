@@ -516,7 +516,8 @@
    * fx/fy 为画面聚焦点（相对照片宽高），z 为放大倍数。
    */
   const SHOTS = [
-    { src: 'intro-assets/hall-front.jpg', t0: 0, t1: 6.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.56, z: 1.8 } }
+    // 脱口秀小剧场（Unsplash 免费授权照片，https://unsplash.com/photos/uLRrrDtatBA）
+    { src: 'https://images.unsplash.com/photo-1618861297248-3438b3d9aae9?w=2400&q=80&fm=jpg', t0: 0, t1: 6.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.52, fy: 0.58, z: 1.85 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
