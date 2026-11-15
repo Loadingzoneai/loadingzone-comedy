@@ -16,7 +16,7 @@ body.intro-on .nav{background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,
 
 .intro-hero{position:absolute;right:6vw;top:50%;transform:translateY(-50%);max-width:min(520px,40vw)}
 .intro-hero .eyebrow{color:var(--yellow,#ffb52f)}
-.intro-hero h1{font-size:clamp(40px,5.6vw,80px);line-height:1.02;margin:16px 0 18px;font-weight:900;letter-spacing:-.045em}
+.intro-hero h1{font-size:clamp(36px,4.6vw,68px);line-height:1.08;margin:16px 0 28px;font-weight:900;letter-spacing:-.045em}
 .intro-hero h1 em{color:var(--yellow,#ffb52f);font-style:normal;display:inline-block;white-space:nowrap}
 .intro-hero p{color:#cfcac2;font-size:17px;line-height:1.7;margin:0 0 26px}
 .intro-hero .cta-row{display:flex;gap:12px;flex-wrap:wrap}
@@ -55,3 +55,4 @@ body.intro-on .nav{background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,
 }
 @media (prefers-reduced-motion:reduce){.intro-hint:after,.intro-loader .ring i{animation:none}}
 .intro-loader .logo-icon{position:absolute;left:34px;top:34px;width:64px;height:64px;background:url(logo.png) no-repeat;background-size:379px auto;background-position:-22px -47px;border-radius:50%}
+.intro-hero h1.en em{display:inline;white-space:normal}

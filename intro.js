@@ -32,8 +32,8 @@
       enter: '向下滚动 · 入场', next: '继续向下 · 近期演出', skip: '跳过入场', replay: '重新入场',
       line1: '今晚，有人在台上紧张。', line2: '也有人，在台下等笑。', line3: '灯，要亮了。',
       eyebrow: 'LOADING ZONE COMEDY · 候场喜剧',
-      title: '把好笑的事，<em>认真做。</em>',
-      subtitle: '墨尔本、悉尼、布里斯班的中文现场喜剧。演出马上开始，欢迎入座。',
+      title: '候场喜剧，<em>快乐不止这一场！</em>',
+      subtitle: '',
       shows: '查看近期演出', join: '加入会员', mic: '近期演出', stool: '加入会员',
       soundOn: '声音：开', soundOff: '声音：关', loading: '候场中'
     },
@@ -41,8 +41,8 @@
       enter: 'Scroll to enter', next: 'Keep scrolling · Shows', skip: 'Skip intro', replay: 'Replay',
       line1: 'Tonight, someone up there is nervous.', line2: 'And someone down here is waiting to laugh.', line3: 'Lights up.',
       eyebrow: 'LOADING ZONE COMEDY · 候场喜剧',
-      title: 'Taking funny <em>seriously.</em>',
-      subtitle: 'Chinese live comedy in Melbourne, Sydney and Brisbane. The show is about to start.',
+      title: 'Loading Zone Comedy: <em>the fun never stops at one show!</em>',
+      subtitle: '',
       shows: 'Upcoming shows', join: 'Become a member', mic: 'Upcoming shows', stool: 'Membership',
       soundOn: 'Sound: on', soundOff: 'Sound: off', loading: 'Loading'
     }
@@ -60,7 +60,9 @@
     // 中文标题和副标题沿用后台首页 CMS（如已发布）
     if (l === 'zh' && cms.title) title.innerHTML = esc(cms.title).replace(/\n/g, '<br>');
     else title.innerHTML = c.title;
-    sub.textContent = (l === 'zh' && cms.subtitle) ? cms.subtitle : c.subtitle;
+    title.classList.toggle('en', l === 'en');
+    sub.textContent = c.subtitle;
+    sub.hidden = !c.subtitle;
     ui('sound').textContent = sound.on ? c.soundOn : c.soundOff;
     renderedLang = l;
   }
