@@ -13,8 +13,8 @@
   const ui = (name) => root.querySelector('[data-intro="' + name + '"]');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 自动播放时间轴（秒）：开门 → 走过道 → 暗场 → 灯亮
-  const TIMELINE = [[0, 0], [2.5, 0.1], [11, 0.74], [12.5, 0.8], [14.5, 1]];
-  const LIGHT_AT = 12.5;
+  const TIMELINE = [[0, 0], [0.4, 0.1], [5.6, 0.74], [6.5, 0.8], [8, 1]];
+  const LIGHT_AT = 6.5;
   function timeToP(sec) {
     for (let i = 1; i < TIMELINE.length; i++) {
       const [t0, p0] = TIMELINE[i - 1], [t1, p1] = TIMELINE[i];
@@ -516,7 +516,7 @@
    * fx/fy 为画面聚焦点（相对照片宽高），z 为放大倍数。
    */
   const SHOTS = [
-    { src: 'intro-assets/hall-front.jpg', t0: 0, t1: 12.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.56, z: 1.9 } }
+    { src: 'intro-assets/hall-front.jpg', t0: 0, t1: 6.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.56, z: 1.8 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
@@ -756,7 +756,7 @@
       vignette(0.55);
     } else {
       if (dark < 1) {
-        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : 12.5, 1 - 0.6 * smooth(0.55, 0.74, p), t);
+        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : 6.5, 1 - 0.6 * smooth(0.55, 0.74, p), t);
         else drawHall(p, house, phones, doorOpen, t);
       }
       ctx.globalAlpha = 1;
@@ -767,10 +767,6 @@
     // 界面层
     const lit = state.lit;
     const set = (name, o) => { const el = ui(name); el.style.opacity = o.toFixed(3); el.style.visibility = o < 0.01 ? 'hidden' : 'visible'; };
-    set('brand', mode === 'full' ? 1 - smooth(0.04, 0.1, p) : 0);
-    set('line1', band(p, 0.16, 0.34));
-    set('line2', band(p, 0.42, 0.62));
-    set('line3', band(p, 0.67, 0.77, 0.02));
     set('hero', smooth(0.55, 0.95, lit));
     set('hot-mic', smooth(0.85, 1, lit));
     set('hot-stool', smooth(0.85, 1, lit));
