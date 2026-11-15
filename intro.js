@@ -525,7 +525,8 @@
     const iw = sh.img.naturalWidth, ih = sh.img.naturalHeight;
     const e = k * k * (3 - 2 * k);
     const fx = sh.from.fx + (sh.to.fx - sh.from.fx) * e, fy = sh.from.fy + (sh.to.fy - sh.from.fy) * e;
-    const z = sh.from.z + (sh.to.z - sh.from.z) * e;
+    // 竖屏时照片按高度铺满已经放大很多，推近幅度减小
+    const z = sh.from.z + (sh.to.z - sh.from.z) * e * (W < H ? 0.3 : 1);
     const s = Math.max(W / iw, H / ih) * z * 1.04;
     const w = iw * s, h = ih * s;
     let x = W / 2 - fx * w + px, y = H / 2 - fy * h + py;
