@@ -580,7 +580,7 @@
     stool.style.left = toX(STOOL.x0) + 'px'; stool.style.top = toY(STOOL.y0) + 'px';
     stool.style.width = PH.w * (STOOL.x1 - STOOL.x0) + 'px'; stool.style.height = (Math.min(H, toY(STOOL.y1)) - toY(STOOL.y0)) + 'px';
   }
-  const dust = Array.from({ length: 150 }, () => ({ u: rand(), v: rand(), s: 0.4 + rand() * 1.4, ph: rand() * 6.28, sp: 0.2 + rand() * 0.6 }));
+  const dust = Array.from({ length: 90 }, () => ({ u: rand(), v: rand(), s: 0.6 + rand() * 1.2, ph: rand() * 6.28, sp: 0.2 + rand() * 0.6 }));
   function lightCurve(l) {
     // 先闪两下再稳定点亮，带一点过冲（灯丝预热）
     if (l <= 0) return 0;
@@ -608,40 +608,72 @@
       g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, y0, W, PH.y + PH.h - y0 + 1);
     }
-    // 聚光灯光柱
-    const ax = PH.x + 0.385 * PH.w, ay = PH.y - 0.12 * PH.h;
-    const bx = PH.x + 0.44 * PH.w, by = PH.y + 1.0 * PH.h;
-    const a = clamp(b) * 0.9;
+    // 聚光灯光束：预先渲染一张低分辨率的柔光贴图（高斯边缘 + 上亮下暗 + 空气雾感），放大后自然模糊
+    const a = clamp(b);
+    if (!beam.canvas || beam.w !== Math.round(PH.w) || beam.h !== Math.round(PH.h)) buildBeam();
     ctx.globalCompositeOperation = 'screen';
-    for (const [spread, alpha] of [[0.25, 0.05], [0.18, 0.06], [0.11, 0.07]]) {
-      const half = spread * PH.w;
-      const g = ctx.createLinearGradient(ax, ay, bx, by);
-      g.addColorStop(0, `rgba(255,232,190,${alpha * 1.6 * a})`);
-      g.addColorStop(0.55, `rgba(255,226,180,${alpha * a})`);
-      g.addColorStop(1, `rgba(255,220,170,${alpha * 0.4 * a})`);
-      ctx.fillStyle = g;
-      ctx.globalAlpha = 1;
-      ctx.beginPath(); ctx.moveTo(ax - half * 0.06, ay); ctx.lineTo(ax + half * 0.06, ay); ctx.lineTo(bx + half, by); ctx.lineTo(bx - half, by); ctx.closePath(); ctx.fill();
-    }
-    // 地面光斑
-    const pool = ctx.createRadialGradient(bx, PH.y + 0.97 * PH.h, 0, bx, PH.y + 0.97 * PH.h, PH.w * 0.26);
-    pool.addColorStop(0, `rgba(255,222,170,${0.16 * a})`); pool.addColorStop(1, 'rgba(255,222,170,0)');
-    ctx.fillStyle = pool;
-    ctx.save(); ctx.translate(bx, PH.y + 0.97 * PH.h); ctx.scale(1, 0.22); ctx.translate(-bx, -(PH.y + 0.97 * PH.h));
-    ctx.fillRect(bx - PH.w * 0.3, PH.y + 0.97 * PH.h - PH.w * 0.3, PH.w * 0.6, PH.w * 0.6); ctx.restore();
-    // 光柱里的灰尘
+    ctx.globalAlpha = a * (0.92 + 0.08 * Math.sin(t * 0.7));
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(beam.canvas, PH.x, PH.y, PH.w, PH.h);
+    // 光束里缓慢漂浮的细小灰尘，只在光束内部可见
     ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = '#fff1d8';
     for (const d of dust) {
-      const v = (d.v + t * 0.012 * d.sp) % 1;
-      const half = 0.2 * PH.w * v;
-      const x = ax + (bx - ax) * v + (d.u - 0.5) * 2 * half + Math.sin(t * d.sp + d.ph) * 6;
-      const y = ay + (by - ay) * v;
-      ctx.globalAlpha = a * 0.5 * (0.5 + 0.5 * Math.sin(t * 1.3 * d.sp + d.ph)) * (1 - v * 0.6);
-      ctx.fillStyle = '#ffe9c4';
-      ctx.fillRect(x, y, d.s, d.s);
+      const v = (d.v + t * 0.006 * d.sp) % 1;
+      const k = beamAt(d.u * 2 - 1, v);
+      if (k < 0.05) continue;
+      const half = (BEAM.h0 + (BEAM.h1 - BEAM.h0) * v) * PH.w;
+      const x = PH.x + (BEAM.ax + (BEAM.bx - BEAM.ax) * v) * PH.w + (d.u - 0.5) * 1.6 * half + Math.sin(t * d.sp * 0.6 + d.ph) * 4;
+      const y = PH.y + (BEAM.ay + (BEAM.by - BEAM.ay) * v) * PH.h;
+      ctx.globalAlpha = a * 0.35 * k * (0.4 + 0.6 * Math.sin(t * d.sp + d.ph) ** 2);
+      ctx.fillRect(x, y, d.s * 0.7, d.s * 0.7);
     }
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
+  }
+  // 光束参数（相对照片宽高）：顶部光源在麦克风上方偏左，落在麦克风与凳子之间的地面
+  const BEAM = { ax: 0.37, ay: -0.18, bx: 0.45, by: 1.0, h0: 0.012, h1: 0.2 };
+  function beamAt(off, v) {
+    // off：相对光束中心的横向位置（-1..1 对应半宽），v：0 顶部 → 1 地面
+    const edge = Math.exp(-off * off * 2.4);
+    const along = Math.pow(1 - v, 0.6) * 0.75 + 0.25;
+    return edge * along * smooth(-0.05, 0.12, v);
+  }
+  const beam = {};
+  function buildBeam() {
+    const w = Math.max(64, Math.round(PH.w / 4)), h = Math.max(64, Math.round(PH.h / 4));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'), img = x.createImageData(w, h), d = img.data;
+    // 低频噪声：模拟空气里的烟雾不均匀
+    const N = 32, grid = Array.from({ length: (N + 1) * (N + 1) }, () => rand());
+    const noise = (u, v) => {
+      const gx = u * N * 0.35, gy = v * N * 0.18, x0 = Math.floor(gx) % N, y0 = Math.floor(gy) % N, fx = gx - Math.floor(gx), fy = gy - Math.floor(gy);
+      const g = (i, j) => grid[(j % N) * (N + 1) + (i % N)];
+      const sx2 = fx * fx * (3 - 2 * fx), sy2 = fy * fy * (3 - 2 * fy);
+      return (g(x0, y0) * (1 - sx2) + g(x0 + 1, y0) * sx2) * (1 - sy2) + (g(x0, y0 + 1) * (1 - sx2) + g(x0 + 1, y0 + 1) * sx2) * sy2;
+    };
+    for (let py = 0; py < h; py++) {
+      const yy = py / h;
+      const v = (yy - BEAM.ay) / (BEAM.by - BEAM.ay);
+      if (v < 0) continue;
+      const cx = BEAM.ax + (BEAM.bx - BEAM.ax) * v, half = BEAM.h0 + (BEAM.h1 - BEAM.h0) * v;
+      for (let px = 0; px < w; px++) {
+        const off = (px / w - cx) / half;
+        if (Math.abs(off) > 2.2) continue;
+        const k = beamAt(off, v) * (0.72 + 0.5 * noise(px / w, yy));
+        const i = (py * w + px) * 4, A = Math.min(1, k * 0.32);
+        d[i] = 255 * A; d[i + 1] = 236 * A; d[i + 2] = 206 * A; d[i + 3] = 255;
+      }
+    }
+    // 地面上的柔和光斑
+    x.putImageData(img, 0, 0);
+    x.globalCompositeOperation = 'lighter';
+    const fx2 = BEAM.bx * w, fy2 = 0.97 * h;
+    x.save(); x.translate(fx2, fy2); x.scale(1, 0.18);
+    const g = x.createRadialGradient(0, 0, 0, 0, 0, w * 0.24);
+    g.addColorStop(0, 'rgba(70,62,50,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(-w * 0.3, -w * 0.3, w * 0.6, w * 0.6); x.restore();
+    beam.canvas = c; beam.w = Math.round(PH.w); beam.h = Math.round(PH.h);
   }
   function vignette(strength) {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.6);
