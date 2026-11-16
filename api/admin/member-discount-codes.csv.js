@@ -70,6 +70,7 @@ module.exports = async function handler(req, res) {
     const query = new URLSearchParams({
       select: "member_number,email,full_name,city,subscription_status,member_discount_codes!inner(code,status)",
       subscription_status: "eq.active",
+      current_period_end: "gt." + new Date().toISOString(),
       "member_discount_codes.status": "eq.active",
       order: "created_at.asc"
     });

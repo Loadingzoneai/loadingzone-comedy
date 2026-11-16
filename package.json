@@ -1,0 +1,8 @@
+{
+  "name": "loadingzone-comedy",
+  "private": true,
+  "description": "候场喜剧 Loading Zone Comedy website",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test tests/flows.test.js" },
+  "dependencies": { "nodemailer": "^6.9.16" }
+}

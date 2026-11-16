@@ -4,6 +4,8 @@
  * Preview is test-only. No schema changes are performed by this handler.
  */
 const crypto = require("crypto");
+const { fulfilMember } = require("../lib/fulfil");
+const { db: serverDb } = require("../lib/server");
 
 function send(res, status, body) {
   res.statusCode = status;
@@ -125,7 +127,10 @@ module.exports = async function handler(req, res) {
       stripe_customer_id: typeof subscription.customer === "string" ? subscription.customer : subscription.customer && subscription.customer.id,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId || null,
-      subscription_status: subscription.status || "inactive",
+      // 单次会员改自动续费时，订阅以 trialing 状态延后到原到期日才扣费，此期间仍是有效会员
+      subscription_status: subscription.status === "trialing" ? "active" : (subscription.status || "inactive"),
+      payment_mode: "subscription",
+      ...(["monthly", "annual"].includes(metadata.plan) ? { plan: metadata.plan } : {}),
       current_period_start: isoFromUnix(subscription.items?.data?.[0]?.current_period_start ?? subscription.current_period_start),
       current_period_end: isoFromUnix(subscription.items?.data?.[0]?.current_period_end ?? subscription.current_period_end),
       cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
@@ -154,30 +159,66 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // 单次付款：把会员有效期从「现在」或「当前到期日（如果还有效）」延长一个月 / 一年
+  async function activateOneTime(session) {
+    const meta = session.metadata || {};
+    const userId = session.client_reference_id || meta.user_id;
+    if (!userId || !["monthly", "annual"].includes(meta.plan)) throw new Error("missing_one_time_metadata");
+    const paymentId = typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent && session.payment_intent.id) || session.id;
+    const r = await fetch(supabaseUrl + "/rest/v1/members?user_id=eq." + encodeURIComponent(userId) + "&select=id,subscription_status,current_period_end,member_since,last_payment_id&limit=1", { headers: dbHeaders });
+    if (!r.ok) throw new Error("member_lookup_failed");
+    const m = (await r.json())[0];
+    if (!m) throw new Error("member_missing");
+    if (m.last_payment_id === paymentId) return userId; // 重复通知，不重复延期
+    const now = Date.now();
+    const currentEnd = m.subscription_status === "active" ? Date.parse(m.current_period_end) : 0;
+    const start = new Date(currentEnd > now ? currentEnd : now);
+    const end = new Date(start);
+    if (meta.plan === "annual") end.setUTCFullYear(end.getUTCFullYear() + 1); else end.setUTCMonth(end.getUTCMonth() + 1);
+    await updateMember("id=eq." + m.id, {
+      subscription_status: "active",
+      payment_mode: "one_time",
+      plan: meta.plan,
+      current_period_start: currentEnd > now ? undefined : start.toISOString(),
+      current_period_end: end.toISOString(),
+      cancel_at_period_end: true,
+      stripe_customer_id: typeof session.customer === "string" ? session.customer : (session.customer && session.customer.id) || undefined,
+      member_since: m.member_since || new Date(now).toISOString(),
+      last_payment_id: paymentId
+    });
+    return userId;
+  }
+
   try {
     const obj = event.data && event.data.object;
+    let fulfilUser = null;
     switch (event.type) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded":
         if (obj && obj.mode === "subscription" && obj.subscription && obj.client_reference_id) {
           await syncSubscription(await retrieveSubscription(typeof obj.subscription === "string" ? obj.subscription : obj.subscription.id), obj.client_reference_id);
+          fulfilUser = obj.client_reference_id;
+        } else if (obj && obj.mode === "payment" && obj.payment_status === "paid" && (obj.metadata || {}).renewal === "once") {
+          fulfilUser = await activateOneTime(obj);
         }
         break;
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        if (obj && obj.id) await syncSubscription(await retrieveSubscription(obj.id), (obj.metadata || {}).user_id);
+        if (obj && obj.id) { await syncSubscription(await retrieveSubscription(obj.id), (obj.metadata || {}).user_id); fulfilUser = (obj.metadata || {}).user_id || null; }
         break;
       case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
         const reference=obj?.subscription||obj?.parent?.subscription_details?.subscription;
         const subId = typeof reference==='string'?reference:reference?.id;
-        if (subId) await syncSubscription(await retrieveSubscription(subId));
+        if (subId) { const sub = await retrieveSubscription(subId); await syncSubscription(sub); fulfilUser = (sub.metadata || {}).user_id || null; }
         break;
       }
       default:
         break;
     }
+    // 开通 / 续期后发送确认邮件与钱包会员卡（同一有效期只发一次）；失败则让 Stripe 重试
+    if (fulfilUser) await fulfilMember(serverDb, fulfilUser);
     const done = await fetch(supabaseUrl + "/rest/v1/stripe_events?id=eq." + encodeURIComponent(event.id), {
       method: "PATCH",
       headers: { ...dbHeaders, Prefer: "return=minimal" },
