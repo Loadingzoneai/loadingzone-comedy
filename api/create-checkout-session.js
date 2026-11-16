@@ -20,7 +20,7 @@ function send(res, status, body) {
 }
 function originFor(req) {
   const origin = String(req.headers.origin || "");
-  if (/^https:\/\/(www\.)?loadingzonecomedy\.(au|com)$/.test(origin)) return origin;
+  if (/^https:\/\/(www\.|preview\.)?loadingzonecomedy\.(au|com)$/.test(origin)) return origin;
   if (/^https:\/\/loadingzone-comedy(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) return origin;
   const host = String(req.headers.host || "").toLowerCase();
   if (/^loadingzone-comedy(-[a-z0-9-]+)?\.vercel\.app$/.test(host)) return "https://" + host;

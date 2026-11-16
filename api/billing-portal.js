@@ -9,7 +9,7 @@ module.exports=async function(req,res){
     const customer=rows[0]?.stripe_customer_id;
     if(!customer)return send(res,404,{error:'No billing account exists for this member.'});
     const origin=String(req.headers.origin||'');
-    if(!/^https:\/\/(loadingzonecomedy\.au|www\.loadingzonecomedy\.au|loadingzone-comedy(?:-[a-z0-9-]+)?\.vercel\.app)$/.test(origin))return send(res,403,{error:'Invalid return destination.'});
+    if(!/^https:\/\/(loadingzonecomedy\.au|www\.loadingzonecomedy\.au|preview\.loadingzonecomedy\.au|loadingzone-comedy(?:-[a-z0-9-]+)?\.vercel\.app)$/.test(origin))return send(res,403,{error:'Invalid return destination.'});
     const params=new URLSearchParams({customer,return_url:origin+'/#login'});
     const r=await fetch('https://api.stripe.com/v1/billing_portal/sessions',{method:'POST',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/x-www-form-urlencoded'},body:params});
     const data=await r.json();
