@@ -1,8 +1,9 @@
 const {send,user,db}=require('../lib/server');
+const {testStripeKey}=require('../lib/stripe-key');
 module.exports=async function(req,res){
   if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
-  const secret=process.env.STRIPE_SECRET_KEY||'';
-  if(!secret.startsWith('sk_test_'))return send(res,503,{error:'Test billing is not configured.'});
+  const stripe=testStripeKey();const secret=stripe.key;
+  if(!stripe.ok){console.error('[billing-portal] '+stripe.reason);return send(res,503,{error:'Test billing is not configured. '+stripe.reason});}
   try{
     const u=await user(req);
     const rows=await db('members?user_id=eq.'+encodeURIComponent(u.id)+'&select=stripe_customer_id&limit=1');

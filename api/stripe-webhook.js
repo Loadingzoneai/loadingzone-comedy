@@ -4,6 +4,7 @@
  * Preview is test-only. No schema changes are performed by this handler.
  */
 const crypto = require("crypto");
+const { testStripeKey } = require("../lib/stripe-key");
 const { fulfilMember } = require("../lib/fulfil");
 const { db: serverDb } = require("../lib/server");
 
@@ -52,11 +53,13 @@ module.exports = async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return send(res, 405, { error: "Method not allowed" });
   }
-  const stripeKey = process.env.STRIPE_SECRET_KEY || "";
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+  const stripe = testStripeKey();
+  const stripeKey = stripe.key;
+  const webhookSecret = String(process.env.STRIPE_WEBHOOK_SECRET || "").trim();
   const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || "";
-  if (!stripeKey.startsWith("sk_test_") || !webhookSecret.startsWith("whsec_")) {
+  if (!stripe.ok || !webhookSecret.startsWith("whsec_")) {
+    console.error("[stripe-webhook] " + (stripe.ok ? "STRIPE_WEBHOOK_SECRET missing or not whsec_" : stripe.reason));
     return send(res, 503, { error: "Test-mode webhook is not configured." });
   }
   if (!supabaseUrl || !supabaseKey) return send(res, 503, { error: "Membership storage is not configured." });

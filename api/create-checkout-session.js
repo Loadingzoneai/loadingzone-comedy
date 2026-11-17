@@ -6,6 +6,7 @@
  * 价格只在服务器决定，忽略浏览器传来的任何价格。目前只接受 Stripe 测试密钥。
  */
 const { randomUUID } = require("crypto");
+const { testStripeKey } = require("../lib/stripe-key");
 const CITIES = new Set(["melbourne", "sydney", "brisbane"]);
 const PLANS = { monthly: { cents: 1280, interval: "month", zh: "月付" }, annual: { cents: 9980, interval: "year", zh: "年付" } };
 const RENEWALS = new Set(["auto", "once"]);
@@ -31,11 +32,12 @@ const cleanPhone = (v) => String(v || "").replace(/[\s()-]/g, "");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return send(res, 405, { error: "Method not allowed" }); }
-  const stripeKey = process.env.STRIPE_SECRET_KEY || "";
+  const stripe = testStripeKey();
+  const stripeKey = stripe.key;
   const root = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
   const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY || "";
   const dbKey = process.env.SUPABASE_SECRET_KEY || "";
-  if (!stripeKey.startsWith("sk_test_")) return send(res, 503, { error: "Test-mode Stripe is not configured for this environment." });
+  if (!stripe.ok) { console.error("[checkout] " + stripe.reason); return send(res, 503, { error: "付款服务尚未配置好（" + stripe.reason + "）" }); }
   if (!root || !publicKey || !dbKey) return send(res, 503, { error: "Membership is not configured yet." });
   const token = /^Bearer\s+(.+)$/i.exec(String(req.headers.authorization || ""));
   if (!token) return send(res, 401, { error: "请先登录。" });
