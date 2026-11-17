@@ -17,13 +17,18 @@ function send(res, status, body) {
 }
 
 async function rawBody(req) {
+  // 先读原始字节流：在 Vercel 上一旦访问 req.body 就会触发 JSON 解析并耗尽流，签名就无法校验。
   if (Buffer.isBuffer(req.rawBody)) return req.rawBody;
-  if (Buffer.isBuffer(req.body)) return req.body;
   if (typeof req.rawBody === "string") return Buffer.from(req.rawBody);
-  if(req.body!=null)return null;
-  const chunks=[];let size=0;
-  for await(const chunk of req){size+=Buffer.byteLength(chunk);if(size>1048576)return null;chunks.push(Buffer.from(chunk));}
-  return Buffer.concat(chunks);
+  if (typeof req[Symbol.asyncIterator] === "function" && !req.readableEnded) {
+    const chunks = []; let size = 0;
+    for await (const chunk of req) { size += Buffer.byteLength(chunk); if (size > 1048576) return null; chunks.push(Buffer.from(chunk)); }
+    if (size > 0) return Buffer.concat(chunks);
+  }
+  const body = Object.getOwnPropertyDescriptor(req, "body") ? req.body : undefined;
+  if (Buffer.isBuffer(body)) return body;
+  if (typeof body === "string" && body) return Buffer.from(body);
+  return null;
 }
 
 function verifySignature(payload, header, secret) {
@@ -238,3 +243,4 @@ module.exports = async function handler(req, res) {
     return send(res, 500, { error: "Webhook processing failed; Stripe may retry this event." });
   }
 };
+module.exports.config = { api: { bodyParser: false } };
