@@ -80,3 +80,13 @@ if(typeof document.addEventListener==='function'){
   });
   if(typeof MutationObserver==='function'){let tm;new MutationObserver(()=>{clearTimeout(tm);tm=setTimeout(initEbButtons,60)}).observe(document.body,{childList:true,subtree:true})}
 }
+// Eventbrite 弹窗打开/关闭时保持页面停在原来的位置（弹窗会锁住页面并把它滚回顶部）
+let ebKeep=null;
+function ebModalOpen(){return [...document.querySelectorAll('iframe')].some(f=>/eventbrite\./.test(f.src||'')&&f.offsetParent!==null&&f.getBoundingClientRect().height>200)}
+function ebHoldScroll(){const y=window.scrollY;clearInterval(ebKeep&&ebKeep.timer);let seenOpen=false,ticks=0;const b=document.body;
+  const timer=setInterval(()=>{ticks++;const open=ebModalOpen();
+    if(open){seenOpen=true;const cs=getComputedStyle(b);if(cs.position==='fixed'&&b.style.top!==(-y)+'px'){b.style.top=(-y)+'px';b.style.width='100%'}}
+    else if(seenOpen||ticks>40){clearInterval(timer);ebKeep=null;if(b.style.top===(-y)+'px'){b.style.top='';b.style.width=''}requestAnimationFrame(()=>window.scrollTo(0,y));setTimeout(()=>{if(Math.abs(window.scrollY-y)>4)window.scrollTo(0,y)},120)}
+    if(ticks>12000)clearInterval(timer)},150);
+  ebKeep={timer,y}}
+if(typeof document.addEventListener==='function')document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('button.eb-buy[data-eb-ready],[data-eb-poster]');if(el)ebHoldScroll()},true);
