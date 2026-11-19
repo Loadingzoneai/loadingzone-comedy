@@ -8,7 +8,7 @@
 const { randomUUID } = require("crypto");
 const { testStripeKey } = require("../lib/stripe-key");
 const CITIES = new Set(["melbourne", "sydney", "brisbane"]);
-const PLANS = { monthly: { cents: 1280, interval: "month", zh: "月付" }, annual: { cents: 9980, interval: "year", zh: "年付" } };
+const PLANS = { monthly: { cents: 990, interval: "month", zh: "月付" }, annual: { cents: 9980, interval: "year", zh: "年付" } };
 const RENEWALS = new Set(["auto", "once"]);
 
 function send(res, status, body) {
@@ -46,7 +46,8 @@ module.exports = async function handler(req, res) {
   let body;
   try { body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {}); } catch (_) { return send(res, 400, { error: "Invalid request body." }); }
   const plan = String(body.plan || ""), city = String(body.city || "").toLowerCase();
-  const renewal = String(body.renewal || "auto");
+  // 单次付款已下线：所有新购买一律为自动续费
+  const renewal = "auto";
   const name = cleanName(body.name), phone = cleanPhone(body.phone);
   if (!PLANS[plan] || !CITIES.has(city) || !RENEWALS.has(renewal)) return send(res, 400, { error: "请选择会员方案、续费方式和城市。" });
   if (name.length < 1 || name.length > 60) return send(res, 400, { error: "请填写名字（60 字以内）。" });

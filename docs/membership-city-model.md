@@ -8,7 +8,7 @@
 - General membership benefits remain available regardless of the selected city, subject to each event's terms.
 
 ## Existing Stripe prices (do not recreate)
-- Monthly: A$12.80
+- Monthly: A$9.90
 - Annual: A$99.80
 
 ## Data model

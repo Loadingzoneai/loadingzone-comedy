@@ -4,7 +4,7 @@ This checklist is for the feature branch and Preview environment only. It does n
 
 ## Current environment facts
 - Preview deployment is built from `feature/membership-integration`.
-- Membership prices already exist in Stripe: A$12.80 monthly and A$99.80 annually.
+- Membership prices already exist in Stripe: A$9.90 monthly and A$99.80 annually.
 - Supabase membership tables exist; member count was last checked as zero.
 - The discount-code migration `202610100001_member_discount_codes.sql` is committed but has not been applied.
 - Stripe webhook signing secret has not been configured.
