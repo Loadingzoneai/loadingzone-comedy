@@ -80,13 +80,12 @@ if(typeof document.addEventListener==='function'){
   });
   if(typeof MutationObserver==='function'){let tm;new MutationObserver(()=>{clearTimeout(tm);tm=setTimeout(initEbButtons,60)}).observe(document.body,{childList:true,subtree:true})}
 }
-// Eventbrite 弹窗打开/关闭时保持页面停在原来的位置（弹窗会锁住页面并把它滚回顶部）
+// Eventbrite 弹窗打开/关闭时保持页面停在原来的位置：
+// 点击时由我们自己把页面"钉住"在当前位置（iOS Safari 下弹窗会把背后页面滚回顶部），弹窗关闭后再放开并回到原位
 let ebKeep=null;
-function ebModalOpen(){return [...document.querySelectorAll('iframe')].some(f=>/eventbrite\./.test(f.src||'')&&f.offsetParent!==null&&f.getBoundingClientRect().height>200)}
-function ebHoldScroll(){const y=window.scrollY;clearInterval(ebKeep&&ebKeep.timer);let seenOpen=false,ticks=0;const b=document.body;
-  const timer=setInterval(()=>{ticks++;const open=ebModalOpen();
-    if(open){seenOpen=true;const cs=getComputedStyle(b);if(cs.position==='fixed'&&b.style.top!==(-y)+'px'){b.style.top=(-y)+'px';b.style.width='100%'}}
-    else if(seenOpen||ticks>40){clearInterval(timer);ebKeep=null;if(b.style.top===(-y)+'px'){b.style.top='';b.style.width=''}requestAnimationFrame(()=>window.scrollTo(0,y));setTimeout(()=>{if(Math.abs(window.scrollY-y)>4)window.scrollTo(0,y)},120)}
-    if(ticks>12000)clearInterval(timer)},150);
-  ebKeep={timer,y}}
-if(typeof document.addEventListener==='function')document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('button.eb-buy[data-eb-ready],[data-eb-poster]');if(el)ebHoldScroll()},true);
+function ebModalOpen(){return [...document.querySelectorAll('iframe')].some(f=>{if(!/eventbrite\./i.test(f.src||''))return false;const r=f.getBoundingClientRect();const cs=getComputedStyle(f);return r.width>100&&r.height>200&&cs.visibility!=='hidden'&&cs.display!=='none'})}
+function ebUnlock(){if(!ebKeep)return;const {y,timer}=ebKeep;clearInterval(timer);ebKeep=null;const b=document.body;b.style.position='';b.style.top='';b.style.left='';b.style.right='';b.style.width='';document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,y);requestAnimationFrame(()=>window.scrollTo(0,y));setTimeout(()=>{if(Math.abs(window.scrollY-y)>4)window.scrollTo(0,y);document.documentElement.style.scrollBehavior=''},350)}
+function ebHoldScroll(){if(ebKeep)return;const y=window.scrollY,b=document.body;b.style.position='fixed';b.style.top=(-y)+'px';b.style.left='0';b.style.right='0';b.style.width='100%';let seenOpen=false,ticks=0;
+  const timer=setInterval(()=>{ticks++;const open=ebModalOpen();if(open){seenOpen=true;if(b.style.position!=='fixed'||b.style.top!==(-y)+'px'){b.style.position='fixed';b.style.top=(-y)+'px'}}else if(seenOpen||ticks>30)ebUnlock()},150);
+  ebKeep={y,timer}}
+if(typeof document.addEventListener==='function')document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('button.eb-buy[data-eb-ready],[data-eb-poster]');if(!el)return;if(el.matches('[data-eb-poster]')){const b=document.getElementById(el.dataset.ebPoster);if(!b||!b.dataset.ebReady)return}ebHoldScroll()},true);
