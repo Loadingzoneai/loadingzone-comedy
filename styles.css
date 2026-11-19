@@ -31,3 +31,12 @@ footer{background:#080808;color:#aaa;padding:45px 7vw 30px;display:grid;grid-tem
 .choice{border:0;padding:0;margin:0 0 16px}.choice legend{font-weight:700;margin-bottom:8px}.choice label{display:flex;gap:10px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer}.choice label:has(input:checked){border-color:#f49a2e;background:#fff8e6}
 .member-code{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;margin:12px 0;border:1px dashed #f49a2e;border-radius:14px;background:#fff8e6}.member-code strong{font-size:20px;letter-spacing:.08em}
 .member-table code{font-size:13px;background:#fff8e6;padding:2px 6px;border-radius:6px}.member-table code.muted{opacity:.45;text-decoration:line-through}
+
+.partner-card{position:relative}
+.partner-tag{position:absolute;top:14px;right:14px;font-size:11px;letter-spacing:.04em;padding:3px 8px;border-radius:999px;background:#fff3dc;color:#a25b00;border:1px solid #f4c77a}
+.partner-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.partner-head h3{margin:0}
+.partner-logo{width:52px;height:52px;border-radius:12px;object-fit:contain;background:#fff;flex:none}
+.partner-logo-text{display:grid;place-items:center;background:#c8161d;color:#fff;font-weight:800;font-size:14px;line-height:1.1;text-align:center;padding:4px}
+.partner-benefit{font-weight:700;color:#d94a32}
+.partner-loc{font-size:14px;color:#555}

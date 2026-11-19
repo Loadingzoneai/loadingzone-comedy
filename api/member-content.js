@@ -38,8 +38,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const root = baseUrl.replace(/\/$/, "");
+    // 示例 / 洽谈中的合作商家只在预览站显示，正式站不显示
+    const previewOnlyFilter = process.env.VERCEL_ENV === "production" ? "&preview_only=eq.false" : "";
     const [partnersResponse, eventsResponse] = await Promise.all([
-      fetch(`${root}/rest/v1/member_partners?select=id,name,city,category,benefit_title,benefit_description,discount_text,terms,website_url,display_order&city=eq.${city}&is_active=eq.true&order=display_order.asc,name.asc`, { headers }),
+      fetch(`${root}/rest/v1/member_partners?select=id,name,city,category,benefit_title,benefit_description,discount_text,terms,website_url,logo_url,locations,preview_only,display_order&city=eq.${city}&is_active=eq.true${previewOnlyFilter}&order=display_order.asc,name.asc`, { headers }),
       fetch(`${root}/rest/v1/member_events?select=id,title,city,event_type,venue,starts_at,booking_url,capacity,description,source,display_order&city=eq.${city}&is_active=eq.true&source=eq.eventbrite&event_type=eq.free_open_mic&order=starts_at.asc.nullslast,display_order.asc,title.asc`, { headers })
     ]);
 
