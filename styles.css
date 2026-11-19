@@ -46,3 +46,5 @@ footer .social-ic{width:26px;height:26px;border-radius:7px;display:grid;place-it
 footer .admin-link{margin-top:10px;font-size:13px;opacity:.7}
 
 footer .xhs-ic{background:#ff2442;color:#fff;font-size:8.5px;font-weight:800;letter-spacing:-.02em;line-height:1}
+
+button.card-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;text-align:left}
