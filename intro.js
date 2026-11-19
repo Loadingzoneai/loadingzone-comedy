@@ -517,27 +517,29 @@
    */
   const SHOTS = [
     // 红色幕布剧场（竖图）：从观众席慢慢推近到幕布，然后黑场转到灯亮的舞台
-    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: LIGHT_AT, from: { fx: 0.5, fy: 0.42, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.3 } }
+    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: LIGHT_AT, from: { fx: 0.5, fy: 0.4, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.35 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
   function drawShot(sh, k, alpha, px, py) {
     const iw = sh.img.naturalWidth, ih = sh.img.naturalHeight;
     const e = k * k * (3 - 2 * k);
-    const fx = sh.from.fx + (sh.to.fx - sh.from.fx) * e, fy = sh.from.fy + (sh.to.fy - sh.from.fy) * e;
-    const z = sh.from.z + (sh.to.z - sh.from.z) * e;
-    // 幕布铺满全屏（横屏时裁掉上下，只留幕布部分）
-    const s = Math.max(W / iw, H / ih) * 1.04 * z;
-    const w = iw * s, h = ih * s;
-    let x = W / 2 - fx * w + px, y = H / 2 - fy * h + py;
-    x = Math.min(0, Math.max(W - w, x)); y = Math.min(0, Math.max(H - h, y));
+    // 以幕布中心为固定点原地放大铺开：先算出起始画面（铺满全屏），再围绕同一个屏幕点放大，不上下平移
+    const base = Math.max(W / iw, H / ih) * 1.04;
+    const w0 = iw * base * sh.from.z, h0 = ih * base * sh.from.z;
+    const x0 = Math.min(0, Math.max(W - w0, W / 2 - sh.from.fx * w0));
+    const y0 = Math.min(0, Math.max(H - h0, H / 2 - sh.from.fy * h0));
+    const ax = x0 + sh.from.fx * w0, ay = y0 + sh.from.fy * h0;
+    const z = 1 + (sh.to.z / sh.from.z - 1) * e;
+    const w = w0 * z, h = h0 * z;
+    const x = ax - sh.from.fx * w + px, y = ay - sh.from.fy * h + py;
     ctx.globalAlpha = alpha;
     ctx.drawImage(sh.img, x, y, w, h);
     ctx.globalAlpha = 1;
   }
   function drawShots(clock, bright, t) {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-    const px = -state.yaw * W * 0.12, py = state.pitch * H * 0.12;
+    const px = 0, py = 0; // 幕布只做原地放大，不随镜头晃动或平移
     for (const sh of SHOTS) {
       if (!sh.ok || clock < sh.t0 - 0.01 || clock > sh.t1 + 1.2) continue;
       const k = clamp((clock - sh.t0) / (sh.t1 - sh.t0));
