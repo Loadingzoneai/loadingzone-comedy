@@ -44,3 +44,5 @@ footer{background:#080808;color:#aaa;padding:45px 7vw 30px;display:grid;grid-tem
 footer .contact a{display:flex;align-items:center;gap:10px}
 footer .social-ic{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none}
 footer .admin-link{margin-top:10px;font-size:13px;opacity:.7}
+
+footer .xhs-ic{background:#ff2442;color:#fff;font-size:8.5px;font-weight:800;letter-spacing:-.02em;line-height:1}
