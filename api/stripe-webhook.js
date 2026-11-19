@@ -123,6 +123,15 @@ module.exports = async function handler(req, res) {
     return data;
   }
 
+  async function subscriptionIsLive(id) {
+    const r = await fetch("https://api.stripe.com/v1/subscriptions/" + encodeURIComponent(id), {
+      headers: { Authorization: "Bearer " + stripeKey, Accept: "application/json" }
+    });
+    if (!r.ok) return false;
+    const sub = await r.json().catch(() => ({}));
+    return ["active", "trialing", "past_due"].includes(sub && sub.status);
+  }
+
   async function syncSubscription(subscription, userIdHint) {
     const metadata = subscription.metadata || {};
     const userId = metadata.user_id || userIdHint;
@@ -150,6 +159,10 @@ module.exports = async function handler(req, res) {
     if (!response.ok) throw new Error("member_lookup_failed");
     const rows = await response.json();
     if (Array.isArray(rows) && rows.length) {
+      // 同一会员已有另一个仍有效的订阅（例如重复付款产生的多余订阅）：保留现有订阅，忽略这个事件，
+      // 避免多余订阅的创建/取消覆盖会员当前状态。
+      const current = rows[0].stripe_subscription_id;
+      if (current && current !== subscription.id && await subscriptionIsLive(current)) return;
       await updateMember("user_id=eq." + encodeURIComponent(userId), patch);
     } else {
       const customerResponse = await fetch("https://api.stripe.com/v1/customers/" + encodeURIComponent(patch.stripe_customer_id || ""), {
