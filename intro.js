@@ -516,8 +516,8 @@
    * fx/fy 为画面聚焦点（相对照片宽高），z 为放大倍数。
    */
   const SHOTS = [
-    // 脱口秀小剧场（Unsplash 免费授权照片，https://unsplash.com/photos/uLRrrDtatBA）
-    { src: 'https://images.unsplash.com/photo-1618861297248-3438b3d9aae9?w=2400&q=80&fm=jpg', t0: 0, t1: 6.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.52, fy: 0.58, z: 1.85 } }
+    // 红色幕布剧场（竖图）：从观众席慢慢推近到幕布，然后黑场转到灯亮的舞台
+    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: 6.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.9 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
@@ -525,14 +525,24 @@
     const iw = sh.img.naturalWidth, ih = sh.img.naturalHeight;
     const e = k * k * (3 - 2 * k);
     const fx = sh.from.fx + (sh.to.fx - sh.from.fx) * e, fy = sh.from.fy + (sh.to.fy - sh.from.fy) * e;
-    // 竖屏时照片按高度铺满已经放大很多，推近幅度减小
-    const z = sh.from.z + (sh.to.z - sh.from.z) * e * (W < H ? 0.3 : 1);
-    const s = Math.max(W / iw, H / ih) * z * 1.04;
+    const z = sh.from.z + (sh.to.z - sh.from.z) * e;
+    // 竖图放在横屏上：按高度放，左右用黑色渐隐衔接（照片边缘本来就是暗的）；竖屏则铺满
+    const narrow = iw / ih < W / H;
+    const base = narrow ? (H / ih) * 1.06 : Math.max(W / iw, H / ih) * 1.04;
+    const s = base * z;
     const w = iw * s, h = ih * s;
     let x = W / 2 - fx * w + px, y = H / 2 - fy * h + py;
-    x = Math.min(0, Math.max(W - w, x)); y = Math.min(0, Math.max(H - h, y));
+    if (w >= W) x = Math.min(0, Math.max(W - w, x)); else x = (W - w) / 2 + px;
+    y = Math.min(0, Math.max(H - h, y));
     ctx.globalAlpha = alpha;
     ctx.drawImage(sh.img, x, y, w, h);
+    if (w < W + 2) {
+      const f = Math.min(w * 0.18, 260);
+      const gl = ctx.createLinearGradient(x, 0, x + f, 0); gl.addColorStop(0, '#000'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      const gr = ctx.createLinearGradient(x + w - f, 0, x + w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, '#000');
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, Math.max(0, x) + 1, H); ctx.fillRect(x + w - 1, 0, W, H);
+      ctx.fillStyle = gl; ctx.fillRect(x, 0, f, H); ctx.fillStyle = gr; ctx.fillRect(x + w - f, 0, f, H);
+    }
     ctx.globalAlpha = 1;
   }
   function drawShots(clock, bright, t) {
