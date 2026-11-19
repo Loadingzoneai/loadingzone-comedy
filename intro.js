@@ -13,8 +13,8 @@
   const ui = (name) => root.querySelector('[data-intro="' + name + '"]');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 自动播放时间轴（秒）：开门 → 走过道 → 暗场 → 灯亮
-  const TIMELINE = [[0, 0], [0.4, 0.1], [5.6, 0.74], [6.5, 0.8], [8, 1]];
-  const LIGHT_AT = 6.5;
+  const TIMELINE = [[0, 0], [0.3, 0.1], [3.8, 0.74], [4.5, 0.8], [6, 1]];
+  const LIGHT_AT = 4.5;
   function timeToP(sec) {
     for (let i = 1; i < TIMELINE.length; i++) {
       const [t0, p0] = TIMELINE[i - 1], [t1, p1] = TIMELINE[i];
@@ -517,7 +517,7 @@
    */
   const SHOTS = [
     // 红色幕布剧场（竖图）：从观众席慢慢推近到幕布，然后黑场转到灯亮的舞台
-    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: 6.5, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.9 } }
+    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: LIGHT_AT, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.9 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
@@ -800,8 +800,8 @@
       vignette(0.55);
     } else {
       if (dark < 1) {
-        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : 6.5, 1 - 0.6 * smooth(0.55, 0.74, p), t);
-        else drawHall(p, house, phones, doorOpen, t);
+        if (shotsReady === SHOTS.length) drawShots(mode === 'full' ? state.clock : LIGHT_AT, 1 - 0.6 * smooth(0.55, 0.74, p), t);
+        else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
       }
       ctx.globalAlpha = 1;
       vignette(0.65);
@@ -835,10 +835,10 @@
   setMode(m);
   if (m !== 'off') {
     const t0 = performance.now();
-    const ready = () => setTimeout(finishLoader, Math.max(0, 1100 - (performance.now() - t0)));
+    const ready = () => finishLoader();
     let waiting = 1 + SHOTS.length, done = false;
     const one = () => { if (--waiting <= 0 && !done) { done = true; ready(); } };
-    setTimeout(() => { if (!done) { done = true; ready(); } }, 6000);
+    setTimeout(() => { if (!done) { done = true; ready(); } }, 3000);
     if (photoReady) one(); else { photo.addEventListener('load', one); photo.addEventListener('error', one); }
     for (const sh of SHOTS) { if (sh.ok) one(); else { sh.img.addEventListener('load', one); sh.img.addEventListener('error', one); } }
   } else finishLoader();
