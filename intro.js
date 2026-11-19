@@ -13,8 +13,8 @@
   const ui = (name) => root.querySelector('[data-intro="' + name + '"]');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 自动播放时间轴（秒）：开门 → 走过道 → 暗场 → 灯亮
-  const TIMELINE = [[0, 0], [0.3, 0.1], [3.8, 0.74], [4.5, 0.8], [6, 1]];
-  const LIGHT_AT = 4.5;
+  const TIMELINE = [[0, 0], [0.1, 0.1], [2.0, 0.74], [2.6, 0.8], [4.1, 1]];
+  const LIGHT_AT = 2.6;
   function timeToP(sec) {
     for (let i = 1; i < TIMELINE.length; i++) {
       const [t0, p0] = TIMELINE[i - 1], [t1, p1] = TIMELINE[i];
@@ -517,7 +517,7 @@
    */
   const SHOTS = [
     // 红色幕布剧场（竖图）：从观众席慢慢推近到幕布，然后黑场转到灯亮的舞台
-    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: LIGHT_AT, from: { fx: 0.5, fy: 0.5, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.9 } }
+    { src: 'intro-assets/theatre-curtain.jpg', t0: 0, t1: LIGHT_AT, from: { fx: 0.5, fy: 0.42, z: 1.0 }, to: { fx: 0.5, fy: 0.4, z: 1.3 } }
   ];
   let shotsReady = 0;
   for (const sh of SHOTS) { sh.img = new Image(); sh.img.onload = () => { sh.ok = true; shotsReady++; }; sh.img.src = sh.src; }
@@ -526,23 +526,13 @@
     const e = k * k * (3 - 2 * k);
     const fx = sh.from.fx + (sh.to.fx - sh.from.fx) * e, fy = sh.from.fy + (sh.to.fy - sh.from.fy) * e;
     const z = sh.from.z + (sh.to.z - sh.from.z) * e;
-    // 竖图放在横屏上：按高度放，左右用黑色渐隐衔接（照片边缘本来就是暗的）；竖屏则铺满
-    const narrow = iw / ih < W / H;
-    const base = narrow ? (H / ih) * 1.06 : Math.max(W / iw, H / ih) * 1.04;
-    const s = base * z;
+    // 幕布铺满全屏（横屏时裁掉上下，只留幕布部分）
+    const s = Math.max(W / iw, H / ih) * 1.04 * z;
     const w = iw * s, h = ih * s;
     let x = W / 2 - fx * w + px, y = H / 2 - fy * h + py;
-    if (w >= W) x = Math.min(0, Math.max(W - w, x)); else x = (W - w) / 2 + px;
-    y = Math.min(0, Math.max(H - h, y));
+    x = Math.min(0, Math.max(W - w, x)); y = Math.min(0, Math.max(H - h, y));
     ctx.globalAlpha = alpha;
     ctx.drawImage(sh.img, x, y, w, h);
-    if (w < W + 2) {
-      const f = Math.min(w * 0.18, 260);
-      const gl = ctx.createLinearGradient(x, 0, x + f, 0); gl.addColorStop(0, '#000'); gl.addColorStop(1, 'rgba(0,0,0,0)');
-      const gr = ctx.createLinearGradient(x + w - f, 0, x + w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, '#000');
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, Math.max(0, x) + 1, H); ctx.fillRect(x + w - 1, 0, W, H);
-      ctx.fillStyle = gl; ctx.fillRect(x, 0, f, H); ctx.fillStyle = gr; ctx.fillRect(x + w - f, 0, f, H);
-    }
     ctx.globalAlpha = 1;
   }
   function drawShots(clock, bright, t) {
