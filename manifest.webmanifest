@@ -1,0 +1,22 @@
+{
+  "name": "候场喜剧 Loading Zone Comedy",
+  "short_name": "候场喜剧",
+  "description": "候场喜剧 · 墨尔本、悉尼中文脱口秀演出、会员与福利",
+  "lang": "zh-CN",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "近期演出", "url": "/#shows" },
+    { "name": "会员中心", "url": "/#login" },
+    { "name": "会员福利", "url": "/#benefits" }
+  ]
+}

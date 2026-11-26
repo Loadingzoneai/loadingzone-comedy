@@ -59,3 +59,13 @@ button.card-link{background:none;border:0;padding:0;font:inherit;cursor:pointer;
 .service-contact{margin-top:30px;background:#111;color:#fff;border-radius:22px;padding:30px}
 .service-contact p{color:#bbb}
 @media(max-width:900px){.services-grid{grid-template-columns:1fr}}
+
+.a2hs{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;display:flex;align-items:center;gap:12px;background:#111;color:#fff;border-radius:18px;padding:12px 12px 12px 12px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-width:520px;margin:0 auto;animation:a2hsIn .35s ease-out}
+.a2hs img{width:44px;height:44px;border-radius:11px;flex:none}
+.a2hs-text{flex:1;display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:1.35}
+.a2hs-text strong{font-size:14px}
+.a2hs-text span{color:#bbb}
+.a2hs-add{background:#ffb52f;color:#111;border:0;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}
+.a2hs-close{background:none;border:0;color:#999;font-size:22px;line-height:1;padding:4px 6px;cursor:pointer}
+@keyframes a2hsIn{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+@media (display-mode: standalone){body{padding-top:env(safe-area-inset-top)}}
