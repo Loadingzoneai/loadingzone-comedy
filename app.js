@@ -1,5 +1,5 @@
 const gallery=['show-01.jpeg','show-02.jpeg','show-03.jpeg','show-04.jpeg','show-05.jpeg','show-06.jpeg','show-07.jpeg','show-08.jpeg','show-09.jpeg','show-10.jpeg'];
-const copy={zh:{navShows:'近期演出',navGallery:'过往演出',navMembership:'会员',navBenefits:'会员福利',memberLogin:'会员登录'},en:{navShows:'Shows',navGallery:'Past Shows',navMembership:'Membership',navBenefits:'Benefits',memberLogin:'Member Login'}};
+const copy={zh:{navShows:'近期演出',navGallery:'过往演出',navMembership:'会员',navBenefits:'会员福利',navServices:'我们的服务',memberLogin:'会员登录'},en:{navShows:'Shows',navGallery:'Past Shows',navMembership:'Membership',navBenefits:'Benefits',navServices:'Services',memberLogin:'Member Login'}};
 let lang=localStorage.getItem('lz_lang')||'zh';
 function img(n){return n}
 
